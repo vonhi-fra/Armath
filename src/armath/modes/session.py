@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from fractions import Fraction
 from random import Random
+from typing import Protocol
 
 from armath.domain import Attempt, Operand, Problem, SessionKind, SessionRecord, parse_answer
 from armath.generators import ProblemGenerator
@@ -11,6 +12,12 @@ from armath.modes.answering import AnswerPolicy
 from armath.modes.choices import ChoiceMaker
 from armath.modes.clock import Clock
 from armath.modes.scoring import ScoringPolicy
+
+
+class AttemptObserver(Protocol):
+    def attempted(self, attempt: Attempt) -> None:
+        """Called after each recorded attempt, before the next problem is generated."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -26,6 +33,7 @@ class SessionPlan:
     kind: SessionKind = SessionKind.PRACTICE
     choices: ChoiceMaker | None = None
     """Multiple-choice options for each problem; ``None`` means the answer is typed."""
+    observers: tuple[AttemptObserver, ...] = ()
 
     def __post_init__(self) -> None:
         if self.time_limit is None and self.question_limit is None:
@@ -159,6 +167,8 @@ class Session:
             corrections=tracker.corrections,
         )
         self._attempts.append(attempt)
+        for observer in self._plan.observers:
+            observer.attempted(attempt)
         self._current, self._choices = self._next_problem()
         self._tracker = _ProblemTracker(moment)
         return attempt

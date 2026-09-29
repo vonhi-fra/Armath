@@ -222,9 +222,14 @@ Backlog (not urgent):
    - ~~Backup: JSON export/restore on the Progress screen (restore merges, never deletes);
      warning banner when the browser refuses to save.~~
    - ~~GitHub Pages deploy workflow (`.github/workflows/pages.yml`, tests before deploy).~~
-   - Next: facts mode with spaced repetition (tables to 12×12 / 19×19, fraction↔decimal pairs);
-     3-2-1 start; self-hosted fonts; still-missing catalogue items (M17 up-and-down squaring,
-     M18 cross multiplication, percentages F2, MC elimination E1–E4); per-trick look-alikes.
+   - ~~Facts mode~~: decks (tables to 12 and 19, squares 11–25, fractions with terminating
+     decimals), Leitner boxes with 0/1/3/7/14/30-day intervals, graded by speed (1.0s + 0.35s per
+     answer character) and corrections; 30-fact sessions (due → up to 8 new → review ahead),
+     missed facts re-asked 3 problems later (max twice). Memory is replayed from history, so it
+     needs no storage of its own. Facts screen with a times-table mastery grid.
+   - Next: 3-2-1 start; self-hosted fonts; still-missing catalogue items (M17 up-and-down
+     squaring, M18 cross multiplication, percentages F2, MC elimination E1–E4); per-trick
+     look-alikes; recommending facts decks from slow table facts in practice sessions.
 
 (Tricks moved ahead of analytics: the learning loop can start from "your slowest problems" right away,
 and weakness detection then has trick applicability to aggregate by.)

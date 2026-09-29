@@ -9,7 +9,8 @@ import pytest
 from factories import START, attempt, problem, record
 
 from armath.analytics import SessionSummary, TrickInsight
-from armath.domain import Operation
+from armath.domain import Operation, SessionKind
+from armath.facts import DeckProgress, FactsReport
 from armath.learning import DrillReport, LibraryEntry, ReviewItem, TrickLesson
 from armath.modes import ManualClock
 from armath.persistence import MemoryStore, StoredHistory, StoredSettings
@@ -42,6 +43,8 @@ class FakeScreen:
         self.recommended: list[TrickInsight] = []
         self.choices: list[str] | None = None
         self.download: tuple[str, str] | None = None
+        self.decks: list[DeckProgress] = []
+        self.facts_report: FactsReport | None = None
         self.backup_message: tuple[str, bool] | None = None
         self.progress: ProgressReport | None = None
 
@@ -99,6 +102,12 @@ class FakeScreen:
     def show_progress(self, report: ProgressReport) -> None:
         self.progress = report
 
+    def show_decks(self, decks: Sequence[DeckProgress]) -> None:
+        self.decks = list(decks)
+
+    def show_facts_report(self, report: FactsReport | None) -> None:
+        self.facts_report = report
+
     def offer_download(self, filename: str, content: str) -> None:
         self.download = (filename, content)
 
@@ -119,6 +128,7 @@ class Harness:
             library_view=self.screen,
             progress_view=self.screen,
             backup_view=self.screen,
+            facts_view=self.screen,
             history=StoredHistory(self.store),
             settings=StoredSettings(self.store),
             registry=default_registry(),
@@ -518,6 +528,66 @@ def test_importing_a_wrong_file_shows_an_error(harness: Harness) -> None:
     harness.app.import_data("hello")
 
     assert harness.screen.backup_message == ("This file is not valid JSON.", True)
+
+
+def test_facts_screen_lists_every_deck_as_new(harness: Harness) -> None:
+    harness.app.open_facts()
+
+    assert harness.screen.screen is Screen.FACTS
+    assert [deck.deck_id for deck in harness.screen.decks] == [
+        "tables-12",
+        "tables-19",
+        "squares",
+        "fractions",
+    ]
+    assert all(deck.new == deck.total for deck in harness.screen.decks)
+
+
+def test_facts_session_trains_a_deck_and_reports_progress(harness: Harness) -> None:
+    harness.app.start_facts("tables-12")
+    assert harness.screen.time == "1 / 30"
+
+    for _ in range(30):
+        harness.clock.advance(1)
+        harness.app.answer(harness.current_answer())
+
+    assert harness.screen.screen is Screen.RESULTS
+    assert harness.screen.facts_report == FactsReport("Times tables to 12", 66, 0, 0, 30)
+    assert StoredHistory(harness.store).all()[0].kind is SessionKind.FACTS
+
+    harness.app.open_facts()
+    tables = harness.screen.decks[0]
+    assert (tables.new, tables.learning) == (36, 30)
+
+
+def test_facts_sessions_stay_out_of_practice_statistics(harness: Harness) -> None:
+    harness.app.start_facts("squares")
+    for _ in range(15):
+        harness.app.answer(harness.current_answer())
+
+    harness.app.open_progress()
+
+    assert harness.screen.progress is not None
+    assert harness.screen.progress.modes == ()
+
+
+def test_play_again_after_facts_repeats_the_deck(harness: Harness) -> None:
+    harness.app.start_facts("squares")
+    for _ in range(15):
+        harness.app.answer(harness.current_answer())
+
+    harness.app.play_again()
+
+    assert harness.screen.screen is Screen.GAME
+    assert harness.screen.time == "1 / 15"
+
+
+def test_unknown_deck_is_ignored(harness: Harness) -> None:
+    harness.app.open_facts()
+
+    harness.app.start_facts("no-such-deck")
+
+    assert harness.screen.screen is Screen.FACTS
 
 
 def test_library_lists_every_trick(harness: Harness) -> None:

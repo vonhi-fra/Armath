@@ -19,10 +19,16 @@ from js import (  # type: ignore[import-not-found]
     localStorage,
     window,
 )
-from pyodide.ffi import create_once_callable, create_proxy, to_js  # type: ignore[import-not-found]
+from pyodide.ffi import (  # type: ignore[import-not-found]
+    create_once_callable,
+    create_proxy,
+    jsnull,
+    to_js,
+)
 
 from armath.analytics import ScorePoint, SessionSummary, TrickInsight
 from armath.domain import Operation
+from armath.facts import DeckProgress, FactsReport
 from armath.learning import DrillReport, LibraryEntry, ReviewItem, TrickLesson
 from armath.modes import SystemClock
 from armath.persistence import MemoryStore, StoredHistory, StoredSettings
@@ -50,9 +56,15 @@ _MISSING = "—"
 _listeners: list[Any] = []
 
 
+def _absent(value: Any) -> bool:
+    """Whether a JS value is null/undefined. Pyodide turns JS ``null`` into ``jsnull``, not
+    ``None``, so ``is None`` alone is wrong for anything coming from JavaScript."""
+    return value is None or value is jsnull
+
+
 def _element(element_id: str) -> Any:
     element = document.getElementById(element_id)
-    if element is None:
+    if _absent(element):
         raise LookupError(f"missing element #{element_id}")
     return element
 
@@ -141,7 +153,7 @@ class LocalStorageStore:
         except Exception:
             self._fail()
             return self._fallback.get(key)
-        return None if value is None else str(value)
+        return None if _absent(value) else str(value)
 
     def set(self, key: str, value: str) -> None:
         self._fallback.set(key, value)
@@ -182,9 +194,11 @@ class DomNavigator:
         Screen.RESULTS: "play-again",
         Screen.LIBRARY: "library-title",
         Screen.PROGRESS: "progress-title",
+        Screen.FACTS: "facts-title",
     }
     _NAV: ClassVar[dict[str, Screen]] = {
         "nav-home": Screen.HOME,
+        "nav-facts": Screen.FACTS,
         "nav-progress": Screen.PROGRESS,
         "nav-library": Screen.LIBRARY,
     }
@@ -349,6 +363,16 @@ class DomResultsView:
         _element("drill-focused").textContent = _seconds(report.focused_seconds)
         _element("drill-mixed").textContent = _seconds(report.mixed_trick_seconds)
         _element("drill-lookalike").textContent = _seconds(report.lookalike_seconds)
+
+    def show_facts_report(self, report: FactsReport | None) -> None:
+        _element("facts-report").hidden = report is None
+        if report is None:
+            return
+        gained = report.mastered_after - report.mastered_before
+        change = f" ({gained:+d})" if gained else ""
+        _element("facts-mastered").textContent = f"{report.mastered_after} / {report.total}{change}"
+        _element("facts-new").textContent = str(report.new_seen)
+        _element("facts-deck").textContent = report.deck_name
 
 
 SVG_NS = "http://www.w3.org/2000/svg"
@@ -564,6 +588,85 @@ class DomProgressView:
         _element("kinds-card").hidden = not report.kinds
 
 
+_BOX_NAMES = ("missed", "just learned", "learning", "mastered", "mastered", "mastered")
+
+
+class DomFactsView:
+    def show_decks(self, decks: Sequence[DeckProgress]) -> None:
+        box = _element("deck-list")
+        box.replaceChildren()
+        for deck in decks:
+            card = _create("article", class_name="card deck-card")
+            head = _create("div", class_name="deck-head")
+            title = _create("div")
+            title.appendChild(_create("h2", deck.name))
+            title.appendChild(_create("p", deck.description, "muted"))
+            head.appendChild(title)
+            button = _create("button", "Practise", "button primary small")
+            button.type = "button"
+            button.dataset.deck = deck.deck_id
+            head.appendChild(button)
+            card.appendChild(head)
+            stats = _create("dl", class_name="stats deck-stats")
+            for label, value in (
+                ("Mastered", f"{deck.mastered} / {deck.total}"),
+                ("Learning", str(deck.learning)),
+                ("New", str(deck.new)),
+                ("Due now", str(deck.due)),
+            ):
+                item = _create("div")
+                item.appendChild(_create("dt", label))
+                item.appendChild(_create("dd", value))
+                stats.appendChild(item)
+            card.appendChild(stats)
+            if deck.grid_range is not None:
+                card.appendChild(self._grid(deck, *deck.grid_range))
+            box.appendChild(card)
+
+    @staticmethod
+    def _grid(deck: DeckProgress, low: int, high: int) -> Any:
+        """The times table as a grid; cell shade = how well the fact is known."""
+        details = _create("details", class_name="fact-grid")
+        details.appendChild(_create("summary", "Show the table"))
+        wrap = _create("div", class_name="table-wrap")
+        table = _create("table")
+        header = _create("tr")
+        header.appendChild(_create("th", "×"))
+        for column in range(low, high + 1):
+            header.appendChild(_create("th", str(column)))
+        head = _create("thead")
+        head.appendChild(header)
+        table.appendChild(head)
+        body = _create("tbody")
+        cells = iter(deck.grid)
+        for row in range(low, high + 1):
+            tr = _create("tr")
+            tr.appendChild(_create("th", str(row)))
+            for _ in range(low, high + 1):
+                cell = next(cells)
+                product = cell.row * cell.column
+                level = "new" if cell.box is None else str(cell.box)
+                td = _create("td", str(product), f"level-{level}")
+                known = (
+                    "not practised yet"
+                    if cell.box is None
+                    else f"{_BOX_NAMES[cell.box]}, last {_seconds(cell.last_seconds)}"
+                )
+                td.title = f"{cell.row} × {cell.column} = {product}: {known}"
+                tr.appendChild(td)
+            body.appendChild(tr)
+        table.appendChild(body)
+        wrap.appendChild(table)
+        details.appendChild(wrap)
+        legend = _create("p", class_name="grid-legend")
+        for level, label in (("new", "new"), ("0", "missed"), ("2", "learning"), ("4", "mastered")):
+            swatch = _create("span", class_name=f"swatch level-{level}")
+            legend.appendChild(swatch)
+            legend.appendChild(_create("span", label))
+        details.appendChild(legend)
+        return details
+
+
 class DomLibraryView:
     def show_library(self, entries: Sequence[LibraryEntry]) -> None:
         box = _element("library-list")
@@ -601,6 +704,7 @@ def main() -> None:
         library_view=DomLibraryView(),
         progress_view=DomProgressView(),
         backup_view=DomBackupView(),
+        facts_view=DomFactsView(),
         history=StoredHistory(store),
         settings=StoredSettings(store),
         registry=default_registry(),
@@ -631,11 +735,14 @@ def main() -> None:
 
     def on_click(event: Any) -> None:
         trick = event.target.closest("[data-trick]")
-        if trick is not None:
+        if not _absent(trick):
             app.start_drill(str(trick.dataset.trick))
         choice = event.target.closest("[data-choice]")
-        if choice is not None:
+        if not _absent(choice):
             app.choose(int(choice.dataset.choice))
+        deck = event.target.closest("[data-deck]")
+        if not _absent(deck):
+            app.start_facts(str(deck.dataset.deck))
 
     def on_reveal(_: Any) -> None:
         app.reveal_steps()
@@ -658,6 +765,7 @@ def main() -> None:
     _listen(_element("nav-home"), "click", lambda _: app.open_home())
     _listen(_element("nav-library"), "click", lambda _: app.open_library())
     _listen(_element("nav-progress"), "click", lambda _: app.open_progress())
+    _listen(_element("nav-facts"), "click", lambda _: app.open_facts())
     _listen(_element("start-optiver"), "click", lambda _: app.start_optiver())
     _listen(_element("export-data"), "click", lambda _: app.export_data())
     _listen(_element("import-file"), "change", on_import)

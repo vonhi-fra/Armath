@@ -7,6 +7,7 @@ from enum import StrEnum
 from typing import Protocol
 
 from armath.analytics import KindInsight, ModeProgress, SessionSummary, TrickInsight
+from armath.facts import DeckProgress, FactsReport
 from armath.learning import DrillReport, LibraryEntry, ReviewItem, TrickLesson
 from armath.ui.charts import LineChartLayout
 from armath.ui.settings_form import SettingsForm
@@ -18,6 +19,7 @@ class Screen(StrEnum):
     RESULTS = "results"
     LIBRARY = "library"
     PROGRESS = "progress"
+    FACTS = "facts"
 
 
 @dataclass(frozen=True)
@@ -81,6 +83,12 @@ class ResultsView(Protocol):
     def show_review(self, items: Sequence[ReviewItem]) -> None: ...
 
     def show_drill_report(self, report: DrillReport | None) -> None: ...
+
+    def show_facts_report(self, report: FactsReport | None) -> None: ...
+
+
+class FactsView(Protocol):
+    def show_decks(self, decks: Sequence[DeckProgress]) -> None: ...
 
 
 class LibraryView(Protocol):

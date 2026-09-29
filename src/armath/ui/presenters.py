@@ -13,6 +13,7 @@ from armath.analytics import (
     trick_insights,
 )
 from armath.domain import Attempt, Problem, SessionRecord
+from armath.facts import DECKS, FactMemory, FactsReport, deck_progress
 from armath.learning import Drill, TrickLesson, library, review
 from armath.modes import Clock, Session, SessionPlan
 from armath.persistence import (
@@ -29,6 +30,7 @@ from armath.ui.formatting import format_clock
 from armath.ui.settings_form import FormError, SettingsForm
 from armath.ui.views import (
     BackupView,
+    FactsView,
     GameView,
     HistoryRow,
     HomeView,
@@ -189,10 +191,28 @@ class ResultsPresenter:
         self._view = view
         self._registry = registry
 
-    def show(self, record: SessionRecord, drill: Drill | None = None) -> None:
+    def show(
+        self,
+        record: SessionRecord,
+        drill: Drill | None = None,
+        facts: FactsReport | None = None,
+    ) -> None:
         self._view.show_summary(summarize(record))
         self._view.show_review(review(record, self._registry, REVIEWED_PROBLEMS))
         self._view.show_drill_report(None if drill is None else drill.report(record))
+        self._view.show_facts_report(facts)
+
+
+class FactsPresenter:
+    def __init__(self, view: FactsView, history: HistoryRepository, clock: Clock) -> None:
+        self._view = view
+        self._history = history
+        self._clock = clock
+
+    def show(self) -> None:
+        memory = FactMemory.replay(self._history.all())
+        now = self._clock.now()
+        self._view.show_decks([deck_progress(deck, memory, now) for deck in DECKS])
 
 
 class ProgressPresenter:

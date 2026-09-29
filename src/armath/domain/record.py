@@ -8,10 +8,12 @@ from armath.domain.attempt import Attempt
 
 
 class SessionKind(StrEnum):
-    """Practice sessions measure you; drills teach (with hints), so statistics treat them apart."""
+    """Practice sessions measure you; drills teach (with hints) and fact sessions train recall,
+    so statistics treat them apart."""
 
     PRACTICE = "practice"
     DRILL = "drill"
+    FACTS = "facts"
 
 
 @dataclass(frozen=True)

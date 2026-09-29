@@ -21,6 +21,7 @@
     </a>
     <nav class="nav" aria-label="Main">
       <button id="nav-home" class="nav-link" type="button">Practice</button>
+      <button id="nav-facts" class="nav-link" type="button">Facts</button>
       <button id="nav-progress" class="nav-link" type="button">Progress</button>
       <button id="nav-library" class="nav-link" type="button">Tricks</button>
     </nav>
@@ -167,6 +168,13 @@
             <div><dt title="Average time on the other problems in the mixed round">Mixed: others</dt><dd id="drill-lookalike"></dd></div>
           </dl>
         </div>
+        <div id="facts-report" class="drill-report" hidden>
+          <h2 id="facts-deck"></h2>
+          <dl class="stats">
+            <div><dt title="Facts in box 3 or higher: recalled fast several times in a row">Mastered</dt><dd id="facts-mastered"></dd></div>
+            <div><dt>New facts seen</dt><dd id="facts-new"></dd></div>
+          </dl>
+        </div>
         <div class="actions">
           <button id="play-again" class="button primary" type="button">Play again <kbd>Enter</kbd></button>
           <button id="back-home" class="button ghost" type="button">Settings <kbd>Esc</kbd></button>
@@ -255,6 +263,16 @@
         </div>
         <p id="backup-message" class="backup-message" role="status" hidden></p>
       </section>
+    </section>
+
+    <section id="screen-facts" class="screen" hidden>
+      <div class="card">
+        <h1 id="facts-title" tabindex="-1">Facts</h1>
+        <p class="lede">Small facts should be recalled, not worked out. Each session asks the facts that are
+          due, adds a few new ones, and brings back the ones you miss. A fact is mastered once you've
+          answered it quickly several times on different days.</p>
+      </div>
+      <div id="deck-list" class="deck-list"></div>
     </section>
 
     <section id="screen-library" class="screen" hidden>

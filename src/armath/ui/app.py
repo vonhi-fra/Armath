@@ -5,12 +5,14 @@ from random import Random
 
 from armath import presets
 from armath.domain import SessionRecord
+from armath.facts import FactsTraining, deck_by_id
 from armath.learning import Drill
 from armath.modes import Clock, SessionPlan
 from armath.persistence import Backup, HistoryRepository, SettingsRepository
 from armath.tricks import TrickRegistry
 from armath.ui.presenters import (
     BackupPresenter,
+    FactsPresenter,
     GamePresenter,
     HomePresenter,
     LibraryPresenter,
@@ -20,6 +22,7 @@ from armath.ui.presenters import (
 from armath.ui.settings_form import SettingsForm
 from armath.ui.views import (
     BackupView,
+    FactsView,
     GameView,
     HomeView,
     LibraryView,
@@ -43,6 +46,7 @@ class App:
         library_view: LibraryView,
         progress_view: ProgressView,
         backup_view: BackupView,
+        facts_view: FactsView,
         history: HistoryRepository,
         settings: SettingsRepository,
         registry: TrickRegistry,
@@ -59,7 +63,11 @@ class App:
         self._library = LibraryPresenter(library_view, registry)
         self._progress = ProgressPresenter(progress_view, history, registry)
         self._backup = BackupPresenter(backup_view, Backup(history, settings), clock)
+        self._facts_screen = FactsPresenter(facts_view, history, clock)
+        self._clock = clock
+        self._rng = rng
         self._drill: Drill | None = None
+        self._facts: FactsTraining | None = None
         self._again: Callable[[], None] = self._start_practice
 
     def open_home(self) -> None:
@@ -77,6 +85,20 @@ class App:
         self._game.quit()
         self._progress.show(mode)
         self._navigator.go_to(Screen.PROGRESS)
+
+    def open_facts(self) -> None:
+        self._game.quit()
+        self._facts_screen.show()
+        self._navigator.go_to(Screen.FACTS)
+
+    def start_facts(self, deck_id: str) -> None:
+        """A spaced-repetition session for one deck; unknown decks are ignored."""
+        try:
+            deck = deck_by_id(deck_id)
+        except KeyError:
+            return
+        training = FactsTraining(deck, self._history.all(), self._clock.now(), self._rng)
+        self._begin(training.plan(), again=lambda: self.start_facts(deck_id), facts=training)
 
     def export_data(self) -> None:
         self._backup.export()
@@ -117,9 +139,15 @@ class App:
         self._begin(self._settings.load().plan(), again=self._start_practice)
 
     def _begin(
-        self, plan: SessionPlan, *, again: Callable[[], None], drill: Drill | None = None
+        self,
+        plan: SessionPlan,
+        *,
+        again: Callable[[], None],
+        drill: Drill | None = None,
+        facts: FactsTraining | None = None,
     ) -> None:
         self._drill = drill
+        self._facts = facts
         self._again = again
         self._game.start(plan, coach=drill)
         self._navigator.go_to(Screen.GAME)
@@ -132,5 +160,6 @@ class App:
 
     def _finished(self, record: SessionRecord) -> None:
         self._history.add(record)
-        self._results.show(record, self._drill)
+        facts = None if self._facts is None else self._facts.report(self._history.all())
+        self._results.show(record, self._drill, facts)
         self._navigator.go_to(Screen.RESULTS)

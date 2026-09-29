@@ -978,6 +978,118 @@ body.loading .nav {
   margin-top: 12px;
 }
 
+/* ---------- Facts ---------- */
+#facts-title:focus {
+  outline: none;
+}
+
+.deck-list {
+  display: grid;
+  gap: 16px;
+}
+
+.deck-card {
+  display: grid;
+  gap: 16px;
+}
+
+.deck-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.deck-head h2 {
+  margin-bottom: 4px;
+}
+
+.deck-head p {
+  margin: 0;
+}
+
+.deck-stats {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.fact-grid summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.fact-grid table {
+  width: auto;
+  margin-top: 12px;
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-family: var(--problem-font);
+  font-size: 0.75rem;
+}
+
+.fact-grid th,
+.fact-grid td {
+  min-width: 30px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.fact-grid th {
+  color: var(--muted);
+}
+
+/* One hue, light to dark: how well a fact is known. Unpractised facts stay neutral. */
+.level-new {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.level-0 {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.level-1 {
+  background: color-mix(in srgb, var(--accent) 28%, var(--surface));
+}
+
+.level-2 {
+  background: color-mix(in srgb, var(--accent) 45%, var(--surface));
+}
+
+.level-3,
+.level-4,
+.level-5 {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.level-4 {
+  background: color-mix(in srgb, var(--accent) 85%, var(--text));
+}
+
+.level-5 {
+  background: color-mix(in srgb, var(--accent) 70%, var(--text));
+}
+
+.grid-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
 /* ---------- Data ---------- */
 .data-actions {
   display: flex;
@@ -1101,6 +1213,14 @@ body.failed #loading-status {
   .optiver-card {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .deck-head {
+    flex-direction: column;
+  }
+
+  .deck-stats {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .choice kbd {
