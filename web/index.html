@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Armath</title>
+  <meta name="description" content="Mental arithmetic trainer for quant interviews.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme.js"></script>
+  <script type="module" src="main.js"></script>
+</head>
+<body class="loading" data-screen="loading">
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Armath home">
+      <span class="brand-mark" aria-hidden="true">×÷</span>
+      <span class="brand-name">Armath</span>
+    </a>
+    <label class="theme-picker">
+      <span class="visually-hidden">Theme</span>
+      <select id="theme">
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="midnight">Midnight</option>
+        <option value="paper">Paper</option>
+        <option value="terminal">Terminal</option>
+      </select>
+    </label>
+  </header>
+
+  <main>
+    <div class="loader" id="loader" role="status">
+      <div class="spinner" aria-hidden="true"></div>
+      <p id="loading-status">Loading Python in your browser…</p>
+      <p class="hint">The first visit downloads ~8 MB; later visits are cached.</p>
+    </div>
+
+    <section id="screen-home" class="screen" hidden>
+      <form id="settings-form" class="card" novalidate>
+        <div class="card-head">
+          <h1>Practice</h1>
+          <p class="lede">Type the answer. The next problem appears as soon as it's right.</p>
+        </div>
+
+        <fieldset class="ops">
+          <legend class="visually-hidden">Operations</legend>
+
+          <div class="op-row">
+            <label class="op-toggle"><input type="checkbox" id="op-add"><span>Addition</span></label>
+            <div class="op-detail">
+              <span class="range"><input id="addition_left-low" inputmode="numeric" aria-label="Addition left from"><span class="to">to</span><input id="addition_left-high" inputmode="numeric" aria-label="Addition left to"></span>
+              <span class="sym">+</span>
+              <span class="range"><input id="addition_right-low" inputmode="numeric" aria-label="Addition right from"><span class="to">to</span><input id="addition_right-high" inputmode="numeric" aria-label="Addition right to"></span>
+            </div>
+          </div>
+
+          <div class="op-row">
+            <label class="op-toggle"><input type="checkbox" id="op-sub"><span>Subtraction</span></label>
+            <div class="op-detail muted">Addition problems in reverse</div>
+          </div>
+
+          <div class="op-row">
+            <label class="op-toggle"><input type="checkbox" id="op-mul"><span>Multiplication</span></label>
+            <div class="op-detail">
+              <span class="range"><input id="multiplication_left-low" inputmode="numeric" aria-label="Multiplication left from"><span class="to">to</span><input id="multiplication_left-high" inputmode="numeric" aria-label="Multiplication left to"></span>
+              <span class="sym">×</span>
+              <span class="range"><input id="multiplication_right-low" inputmode="numeric" aria-label="Multiplication right from"><span class="to">to</span><input id="multiplication_right-high" inputmode="numeric" aria-label="Multiplication right to"></span>
+            </div>
+          </div>
+
+          <div class="op-row">
+            <label class="op-toggle"><input type="checkbox" id="op-div"><span>Division</span></label>
+            <div class="op-detail muted">Multiplication problems in reverse</div>
+          </div>
+        </fieldset>
+
+        <div class="form-foot">
+          <label class="duration">
+            <span>Duration</span>
+            <select id="duration">
+              <option value="30">30 seconds</option>
+              <option value="60">1 minute</option>
+              <option value="120">2 minutes</option>
+              <option value="300">5 minutes</option>
+              <option value="600">10 minutes</option>
+            </select>
+          </label>
+          <button id="start" class="button primary" type="submit">Start <kbd>Enter</kbd></button>
+        </div>
+
+        <ul id="form-errors" class="errors" role="alert" hidden></ul>
+      </form>
+
+      <section class="card" aria-labelledby="history-title">
+        <h2 id="history-title">Recent sessions</h2>
+        <p id="history-empty" class="muted">No sessions yet. Your scores will show up here.</p>
+        <div class="table-wrap">
+          <table id="history-table" hidden>
+            <thead><tr><th>When</th><th>Mode</th><th class="num">Score</th><th class="num">Accuracy</th></tr></thead>
+            <tbody id="history-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="screen-game" class="screen" hidden>
+      <div class="hud">
+        <div class="hud-item"><span class="hud-label">Time</span><span id="timer" class="hud-value">0:00</span></div>
+        <div class="hud-item"><span class="hud-label">Score</span><span id="score" class="hud-value">0</span></div>
+      </div>
+      <div class="stage">
+        <div id="problem" class="problem" aria-live="polite"></div>
+        <input id="answer" class="answer" type="text" inputmode="decimal" autocomplete="off"
+               autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Your answer">
+      </div>
+      <button id="quit" class="button ghost small" type="button">Quit <kbd>Esc</kbd></button>
+    </section>
+
+    <section id="screen-results" class="screen" hidden>
+      <div class="card results">
+        <p id="result-mode" class="eyebrow"></p>
+        <p class="big-score"><span id="result-score">0</span><span class="big-score-label">score</span></p>
+        <dl class="stats">
+          <div><dt>Answered</dt><dd id="result-answered"></dd></div>
+          <div><dt>Accuracy</dt><dd id="result-accuracy"></dd></div>
+          <div><dt>Avg time</dt><dd id="result-mean"></dd></div>
+        </dl>
+        <div id="slowest" hidden>
+          <h2>Slowest problems</h2>
+          <table class="slowest">
+            <tbody id="slowest-rows"></tbody>
+          </table>
+        </div>
+        <div class="actions">
+          <button id="play-again" class="button primary" type="button">Play again <kbd>Enter</kbd></button>
+          <button id="back-home" class="button ghost" type="button">Settings <kbd>Esc</kbd></button>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

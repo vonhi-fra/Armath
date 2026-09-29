@@ -5,6 +5,7 @@ from armath.domain.attempt import Attempt
 from armath.domain.numbers import NumberStyle, Operand, format_number
 from armath.domain.operations import Operation
 from armath.domain.problem import Problem, Unknown
+from armath.domain.record import SessionRecord
 
 __all__ = [
     "Attempt",
@@ -12,6 +13,7 @@ __all__ = [
     "Operand",
     "Operation",
     "Problem",
+    "SessionRecord",
     "Unknown",
     "format_number",
     "parse_answer",

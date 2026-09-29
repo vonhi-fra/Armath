@@ -38,7 +38,7 @@ class Problem:
         if self.operation is Operation.DIVIDE and self.right.value == 0:
             raise ValueError("division by zero")
         if self.operation.apply(self.left.value, self.right.value) != self.result.value:
-            raise ValueError(f"equation does not hold: {self._equation()}")
+            raise ValueError(f"equation does not hold: {self.equation}")
         if not self._has_unique_answer():
             raise ValueError(f"the unknown is not uniquely determined: {self.prompt}")
 
@@ -76,6 +76,11 @@ class Problem:
         result = self._shown(Unknown.RESULT)
         return f"{left} {self.operation.symbol} {right} = {result}"
 
+    @property
+    def equation(self) -> str:
+        """The problem with every part shown, e.g. ``66 × 2.1 = 138.6``."""
+        return f"{self.left} {self.operation.symbol} {self.right} = {self.result}"
+
     def _part(self, part: Unknown) -> Operand:
         match part:
             case Unknown.LEFT:
@@ -87,9 +92,6 @@ class Problem:
 
     def _shown(self, part: Unknown) -> str:
         return PLACEHOLDER if part is self.unknown else str(self._part(part))
-
-    def _equation(self) -> str:
-        return f"{self.left} {self.operation.symbol} {self.right} = {self.result}"
 
     def _has_unique_answer(self) -> bool:
         match self.operation, self.unknown:

@@ -5,7 +5,7 @@ from datetime import timedelta
 from fractions import Fraction
 from random import Random
 
-from armath.domain import Attempt, Problem, parse_answer
+from armath.domain import Attempt, Problem, SessionRecord, parse_answer
 from armath.generators import ProblemGenerator
 from armath.modes.answering import AnswerPolicy
 from armath.modes.clock import Clock
@@ -21,6 +21,7 @@ class SessionPlan:
     answering: AnswerPolicy
     time_limit: timedelta | None = None
     question_limit: int | None = None
+    name: str = "Custom"
 
     def __post_init__(self) -> None:
         if self.time_limit is None and self.question_limit is None:
@@ -75,6 +76,15 @@ class Session:
         limit = self._plan.question_limit
         out_of_questions = limit is not None and len(self._attempts) >= limit
         return out_of_time or out_of_questions
+
+    def record(self) -> SessionRecord:
+        """A snapshot of the session for the history."""
+        return SessionRecord(
+            mode=self._plan.name,
+            started_at=self._started_at,
+            score=self.score,
+            attempts=self.attempts,
+        )
 
     def answer(self, text: str) -> Attempt | None:
         """Submit typed text; returns the attempt if it was accepted, else ``None``."""

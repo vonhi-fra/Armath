@@ -24,11 +24,14 @@ build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests"]
 addopts = ["--strict-markers", "--strict-config", "-ra", "--import-mode=importlib"]
 
 [tool.coverage.run]
 source = ["armath"]
 branch = true
+# Browser adapter: needs Pyodide, verified by running the site.
+omit = ["*/armath/web/*"]
 
 [tool.ruff]
 line-length = 100
@@ -51,4 +54,4 @@ allowed-confusables = ["−", "×", "÷"]
 
 [tool.mypy]
 strict = true
-files = ["src", "tests"]
+files = ["src", "tests", "scripts"]

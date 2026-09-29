@@ -5,7 +5,7 @@ import pytest
 
 from armath import presets
 from armath.domain import Operation
-from armath.generators import IntRange, RangeGenerator
+from armath.generators import IntRange, RangeGenerator, ZetamacSettings
 from armath.modes import (
     CorrectCount,
     CorrectMinusWrong,
@@ -123,6 +123,27 @@ def test_plan_validation(
 ) -> None:
     with pytest.raises(ValueError, match=message):
         SessionPlan(ADDITION, CorrectCount(), UntilCorrect(), time_limit, question_limit)
+
+
+def test_record_captures_the_session() -> None:
+    clock = ManualClock(START)
+    session = _zetamac_session(clock)
+    clock.advance(1)
+    session.answer(_answer(session))
+
+    record = session.record()
+
+    assert record.mode == "Zetamac 10s"
+    assert record.started_at == START
+    assert record.score == 1
+    assert record.attempts == session.attempts
+
+
+def test_preset_name_marks_custom_ranges() -> None:
+    custom = ZetamacSettings(addition_left=IntRange(10, 99))
+
+    assert presets.zetamac().name == "Zetamac 120s"
+    assert presets.zetamac(custom, timedelta(seconds=60)).name == "Zetamac 60s custom"
 
 
 def test_manual_clock_rejects_going_backwards() -> None:

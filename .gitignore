@@ -1,6 +1,7 @@
 # Claude
 CLAUDE.md
 .claude/settings.local.json
+.claude/launch.json
 
 # Python
 __pycache__/
@@ -9,6 +10,7 @@ __pycache__/
 .venv-wsl/
 dist/
 build/
+site/
 *.egg-info/
 
 # Tool caches and reports
