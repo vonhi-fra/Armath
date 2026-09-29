@@ -87,6 +87,37 @@ MUL, DIV, ADD = Operation.MULTIPLY, Operation.DIVIDE, Operation.ADD
             ["47 × 53 = (50 − 3) × (50 + 3)", "50 × 50 = 2500", "3 × 3 = 9", "2500 − 9 = 2491"],
         ),
         (_problem("65 x 65"), "mul-square-5", ["6 × 7 = 42", "42 | 25 → 4225"]),
+        (
+            _problem("43 x 47"),
+            "mul-units-sum-10",
+            ["4 × 5 = 20", "3 × 7 = 21", "20 | 21 → 2021"],
+        ),
+        (
+            _problem("41 x 49"),
+            "mul-units-sum-10",
+            ["4 × 5 = 20", "1 × 9 = 9", "20 | 09 → 2009"],
+        ),
+        (_problem("97 x 96"), "mul-base-100", ["97 − 4 = 93", "3 × 4 = 12", "93 | 12 → 9312"]),
+        (
+            _problem("103 x 105"),
+            "mul-base-100",
+            ["103 + 5 = 108", "3 × 5 = 15", "108 | 15 → 10815"],
+        ),
+        (
+            _problem("13 x 16"),
+            "mul-teens",
+            ["13 + 6 = 19", "19 × 10 = 190", "3 × 6 = 18", "190 + 18 = 208"],
+        ),
+        (  # also units summing to 10, which is quicker still
+            _problem("13 x 17"),
+            "mul-units-sum-10",
+            ["1 × 2 = 2", "3 × 7 = 21", "2 | 21 → 221"],
+        ),
+        (
+            _problem("43 x 48"),
+            "mul-close-together",
+            ["43 + 8 = 51", "40 × 51 = 2040", "3 × 8 = 24", "2040 + 24 = 2064"],
+        ),
     ],
 )
 def test_optiver_worked_example(problem: Problem, best: str, work: list[str]) -> None:

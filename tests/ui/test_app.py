@@ -41,6 +41,8 @@ class FakeScreen:
         self.library: list[LibraryEntry] = []
         self.recommended: list[TrickInsight] = []
         self.choices: list[str] | None = None
+        self.download: tuple[str, str] | None = None
+        self.backup_message: tuple[str, bool] | None = None
         self.progress: ProgressReport | None = None
 
     def go_to(self, screen: Screen) -> None:
@@ -97,6 +99,12 @@ class FakeScreen:
     def show_progress(self, report: ProgressReport) -> None:
         self.progress = report
 
+    def offer_download(self, filename: str, content: str) -> None:
+        self.download = (filename, content)
+
+    def show_backup_message(self, text: str, *, is_error: bool) -> None:
+        self.backup_message = (text, is_error)
+
 
 class Harness:
     def __init__(self) -> None:
@@ -110,6 +118,7 @@ class Harness:
             results_view=self.screen,
             library_view=self.screen,
             progress_view=self.screen,
+            backup_view=self.screen,
             history=StoredHistory(self.store),
             settings=StoredSettings(self.store),
             registry=default_registry(),
@@ -477,6 +486,38 @@ def test_practice_has_no_choices(harness: Harness) -> None:
     harness.start()
 
     assert harness.screen.choices is None
+
+
+def test_export_then_import_into_another_browser(harness: Harness) -> None:
+    StoredHistory(harness.store).add(record(attempt(), mode="Zetamac 120s"))
+    harness.app.export_data()
+    assert harness.screen.download is not None
+    filename, content = harness.screen.download
+    other = Harness()
+
+    other.app.open_progress()
+    other.app.import_data(content)
+
+    assert filename == "armath-backup-2026-09-29.json"
+    assert other.screen.backup_message == ("Restored 1 session.", False)
+    assert other.screen.progress is not None
+    assert other.screen.progress.modes == ("Zetamac 120s",)
+
+
+def test_importing_again_reports_duplicates(harness: Harness) -> None:
+    StoredHistory(harness.store).add(record(attempt()))
+    harness.app.export_data()
+    assert harness.screen.download is not None
+
+    harness.app.import_data(harness.screen.download[1])
+
+    assert harness.screen.backup_message == ("Restored 0 sessions; 1 was already here.", False)
+
+
+def test_importing_a_wrong_file_shows_an_error(harness: Harness) -> None:
+    harness.app.import_data("hello")
+
+    assert harness.screen.backup_message == ("This file is not valid JSON.", True)
 
 
 def test_library_lists_every_trick(harness: Harness) -> None:

@@ -38,6 +38,10 @@
   </header>
 
   <main>
+    <p id="storage-warning" class="storage-warning" role="alert" hidden>
+      This browser isn't letting Armath save anything (private window or blocked site data?),
+      so your sessions will be lost when you close the page.
+    </p>
     <div class="loader" id="loader" role="status">
       <div class="spinner" aria-hidden="true"></div>
       <p id="loading-status">Loading Python in your browser…</p>
@@ -237,6 +241,20 @@
           </div>
         </section>
       </div>
+
+      <section class="card" aria-labelledby="data-title">
+        <h2 id="data-title">Your data</h2>
+        <p class="muted">Everything is saved in this browser only, so clearing site data deletes it.
+          Download a backup now and then. Restoring one merges it in: nothing is deleted or duplicated.</p>
+        <div class="data-actions">
+          <button id="export-data" class="button primary small" type="button">Download backup</button>
+          <label class="button ghost small file-button">
+            Restore from file
+            <input id="import-file" type="file" accept=".json,application/json">
+          </label>
+        </div>
+        <p id="backup-message" class="backup-message" role="status" hidden></p>
+      </section>
     </section>
 
     <section id="screen-library" class="screen" hidden>

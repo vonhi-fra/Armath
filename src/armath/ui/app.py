@@ -7,9 +7,10 @@ from armath import presets
 from armath.domain import SessionRecord
 from armath.learning import Drill
 from armath.modes import Clock, SessionPlan
-from armath.persistence import HistoryRepository, SettingsRepository
+from armath.persistence import Backup, HistoryRepository, SettingsRepository
 from armath.tricks import TrickRegistry
 from armath.ui.presenters import (
+    BackupPresenter,
     GamePresenter,
     HomePresenter,
     LibraryPresenter,
@@ -18,6 +19,7 @@ from armath.ui.presenters import (
 )
 from armath.ui.settings_form import SettingsForm
 from armath.ui.views import (
+    BackupView,
     GameView,
     HomeView,
     LibraryView,
@@ -40,6 +42,7 @@ class App:
         results_view: ResultsView,
         library_view: LibraryView,
         progress_view: ProgressView,
+        backup_view: BackupView,
         history: HistoryRepository,
         settings: SettingsRepository,
         registry: TrickRegistry,
@@ -55,6 +58,7 @@ class App:
         self._results = ResultsPresenter(results_view, registry)
         self._library = LibraryPresenter(library_view, registry)
         self._progress = ProgressPresenter(progress_view, history, registry)
+        self._backup = BackupPresenter(backup_view, Backup(history, settings), clock)
         self._drill: Drill | None = None
         self._again: Callable[[], None] = self._start_practice
 
@@ -73,6 +77,14 @@ class App:
         self._game.quit()
         self._progress.show(mode)
         self._navigator.go_to(Screen.PROGRESS)
+
+    def export_data(self) -> None:
+        self._backup.export()
+
+    def import_data(self, text: str) -> None:
+        """Merge a backup file into the data, then refresh the progress screen."""
+        self._backup.restore(text)
+        self._progress.show()
 
     def start(self, form: SettingsForm) -> None:
         """Zetamac-style practice with the settings from the home screen."""

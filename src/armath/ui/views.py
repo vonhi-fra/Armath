@@ -89,3 +89,11 @@ class LibraryView(Protocol):
 
 class ProgressView(Protocol):
     def show_progress(self, report: ProgressReport) -> None: ...
+
+
+class BackupView(Protocol):
+    def offer_download(self, filename: str, content: str) -> None:
+        """Let the user save ``content`` as a file."""
+        ...
+
+    def show_backup_message(self, text: str, *, is_error: bool) -> None: ...

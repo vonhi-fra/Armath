@@ -5,14 +5,21 @@ This is the only module that imports Pyodide's ``js``/``pyodide`` modules. JS ob
 """
 
 from collections.abc import Callable, Sequence
-from contextlib import suppress
 from datetime import datetime
 from itertools import groupby
 from random import Random
 from typing import Any, ClassVar
 
-from js import Date, Object, document, localStorage, window  # type: ignore[import-not-found]
-from pyodide.ffi import create_proxy, to_js  # type: ignore[import-not-found]
+from js import (  # type: ignore[import-not-found]
+    URL,
+    Blob,
+    Date,
+    Object,
+    document,
+    localStorage,
+    window,
+)
+from pyodide.ffi import create_once_callable, create_proxy, to_js  # type: ignore[import-not-found]
 
 from armath.analytics import ScorePoint, SessionSummary, TrickInsight
 from armath.domain import Operation
@@ -117,22 +124,55 @@ def _lesson(
 
 
 class LocalStorageStore:
-    """localStorage can be missing or throw (private mode, blocked storage); fall back to memory."""
+    """localStorage can be missing or throw (private mode, blocked or full storage).
 
-    def __init__(self) -> None:
+    Data then lives in memory for this visit only, and ``on_failure`` is called once so the page
+    can warn that nothing is being saved.
+    """
+
+    def __init__(self, on_failure: Callable[[], None]) -> None:
         self._fallback = MemoryStore()
+        self._on_failure = on_failure
+        self._failed = False
 
     def get(self, key: str) -> str | None:
         try:
             value = localStorage.getItem(key)
         except Exception:
+            self._fail()
             return self._fallback.get(key)
         return None if value is None else str(value)
 
     def set(self, key: str, value: str) -> None:
         self._fallback.set(key, value)
-        with suppress(Exception):
+        try:
             localStorage.setItem(key, value)
+        except Exception:
+            self._fail()
+
+    def _fail(self) -> None:
+        if not self._failed:
+            self._failed = True
+            self._on_failure()
+
+
+class DomBackupView:
+    def offer_download(self, filename: str, content: str) -> None:
+        options = to_js({"type": "application/json"}, dict_converter=Object.fromEntries)
+        url = URL.createObjectURL(Blob.new(to_js([content]), options))
+        link = _create("a")
+        link.href = url
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(url)
+
+    def show_backup_message(self, text: str, *, is_error: bool) -> None:
+        message = _element("backup-message")
+        message.textContent = text
+        message.classList.toggle("error", is_error)
+        message.hidden = False
 
 
 class DomNavigator:
@@ -546,7 +586,11 @@ class DomLibraryView:
 
 def main() -> None:
     """Build the app, attach event listeners and show the home screen."""
-    store = LocalStorageStore()
+
+    def warn_storage() -> None:
+        _element("storage-warning").hidden = False
+
+    store = LocalStorageStore(on_failure=warn_storage)
     navigator = DomNavigator()
     home_view = DomHomeView()
     app = App(
@@ -556,6 +600,7 @@ def main() -> None:
         results_view=DomResultsView(),
         library_view=DomLibraryView(),
         progress_view=DomProgressView(),
+        backup_view=DomBackupView(),
         history=StoredHistory(store),
         settings=StoredSettings(store),
         registry=default_registry(),
@@ -596,6 +641,13 @@ def main() -> None:
         app.reveal_steps()
         _element("answer").focus()
 
+    def on_import(event: Any) -> None:
+        files = event.target.files
+        if not files.length:
+            return
+        files.item(0).text().then(create_once_callable(app.import_data))
+        event.target.value = ""  # choosing the same file again should work too
+
     _listen(_element("settings-form"), "submit", on_start)
     _listen(_element("answer"), "input", lambda event: app.answer(event.target.value))
     _listen(_element("answer"), "keydown", on_answer_key)
@@ -607,6 +659,8 @@ def main() -> None:
     _listen(_element("nav-library"), "click", lambda _: app.open_library())
     _listen(_element("nav-progress"), "click", lambda _: app.open_progress())
     _listen(_element("start-optiver"), "click", lambda _: app.start_optiver())
+    _listen(_element("export-data"), "click", lambda _: app.export_data())
+    _listen(_element("import-file"), "change", on_import)
     _listen(
         _element("progress-mode"), "change", lambda event: app.open_progress(event.target.value)
     )

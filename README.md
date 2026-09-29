@@ -29,3 +29,10 @@ and the UI is plain HTML/CSS, so the site can be hosted on GitHub Pages.
 uv run python scripts/build_site.py   # assemble site/ (web/ files + fresh wheel)
 uv run python scripts/serve.py        # http://localhost:8000
 ```
+
+Every push to `main` runs the tests, builds the site and deploys it to GitHub Pages
+(`.github/workflows/pages.yml`). One-time setup: repository **Settings → Pages → Source:
+GitHub Actions**.
+
+Your practice history lives only in your browser; use **Progress → Your data** to download a
+backup or restore one.

@@ -216,9 +216,15 @@ Backlog (not urgent):
    `modes/choices.py` (close distractors + one decimal-point slip), preset `optiver()`.
    New tricks: general methods for decimals (incl. long division like 39 ÷ 2 = 19.5), fractions and
    missing operands (undo, then the best trick for the rewritten problem), M11, M16, D8 (= decimal
-   division method), D9 cancel zeros, M4/F5 as "decimal as a fraction". Not yet: M12 close
-   together, M13, M14 base 100, M15 teens, M17–M18, percentages (F2), MC elimination (E1–E4).
-8. **Polish:** facts mode with spaced repetition, backlog items, GitHub Pages deploy.
+   division method), D9 cancel zeros, M4/F5 as "decimal as a fraction".
+8. **Polish**, in parts:
+   - ~~M12 close together, M13 same tens/units sum to 10, M14 base 100, M15 teens~~ (48 tricks now).
+   - ~~Backup: JSON export/restore on the Progress screen (restore merges, never deletes);
+     warning banner when the browser refuses to save.~~
+   - ~~GitHub Pages deploy workflow (`.github/workflows/pages.yml`, tests before deploy).~~
+   - Next: facts mode with spaced repetition (tables to 12×12 / 19×19, fraction↔decimal pairs);
+     3-2-1 start; self-hosted fonts; still-missing catalogue items (M17 up-and-down squaring,
+     M18 cross multiplication, percentages F2, MC elimination E1–E4); per-trick look-alikes.
 
 (Tricks moved ahead of analytics: the learning loop can start from "your slowest problems" right away,
 and weakness detection then has trick applicability to aggregate by.)

@@ -1,6 +1,7 @@
 """Session history and settings, stored as JSON in a key-value store."""
 
 import json
+from collections.abc import Sequence
 from typing import Protocol
 
 from armath.domain import SessionRecord
@@ -28,6 +29,8 @@ class HistoryRepository(Protocol):
         """Every stored session, oldest first."""
         ...
 
+    def replace_all(self, records: Sequence[SessionRecord]) -> None: ...
+
 
 class SettingsRepository(Protocol):
     def load(self) -> PracticeSettings: ...
@@ -46,7 +49,9 @@ class StoredHistory:
         self._key = key
 
     def add(self, record: SessionRecord) -> None:
-        records = [*self.all(), record]
+        self.replace_all([*self.all(), record])
+
+    def replace_all(self, records: Sequence[SessionRecord]) -> None:
         document = {"version": FORMAT_VERSION, "sessions": [record_to_dict(r) for r in records]}
         self._store.set(self._key, json.dumps(document, separators=(",", ":")))
 

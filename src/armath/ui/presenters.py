@@ -15,13 +15,20 @@ from armath.analytics import (
 from armath.domain import Attempt, Problem, SessionRecord
 from armath.learning import Drill, TrickLesson, library, review
 from armath.modes import Clock, Session, SessionPlan
-from armath.persistence import HistoryRepository, SettingsRepository
+from armath.persistence import (
+    Backup,
+    BackupError,
+    HistoryRepository,
+    SettingsRepository,
+    backup_filename,
+)
 from armath.settings import PracticeSettings
 from armath.tricks import TrickRegistry
 from armath.ui.charts import line_chart
 from armath.ui.formatting import format_clock
 from armath.ui.settings_form import FormError, SettingsForm
 from armath.ui.views import (
+    BackupView,
     GameView,
     HistoryRow,
     HomeView,
@@ -211,6 +218,32 @@ class ProgressPresenter:
                 kinds=tuple(kind_insights(records)),
             )
         )
+
+
+class BackupPresenter:
+    def __init__(self, view: BackupView, backup: Backup, clock: Clock) -> None:
+        self._view = view
+        self._backup = backup
+        self._clock = clock
+
+    def export(self) -> None:
+        now = self._clock.now()
+        filename = backup_filename(now)
+        self._view.offer_download(filename, self._backup.export(now))
+        self._view.show_backup_message(f"Saved your data as {filename}.", is_error=False)
+
+    def restore(self, text: str) -> None:
+        try:
+            summary = self._backup.restore(text)
+        except BackupError as error:
+            self._view.show_backup_message(str(error), is_error=True)
+            return
+        sessions = "session" if summary.added == 1 else "sessions"
+        message = f"Restored {summary.added} {sessions}"
+        if summary.already_present:
+            verb = "was" if summary.already_present == 1 else "were"
+            message += f"; {summary.already_present} {verb} already here"
+        self._view.show_backup_message(message + ".", is_error=False)
 
 
 class LibraryPresenter:

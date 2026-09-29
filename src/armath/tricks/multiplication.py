@@ -394,3 +394,119 @@ class SquareEndingInFive(WholeNumberTrick):
     def example_operands(self, rng: Random) -> tuple[int, int]:
         value = rng.randint(1, 9) * 10 + 5
         return value, value
+
+
+def _side_by_side(high: int, low: int) -> Step:
+    """Write ``high`` and then ``low`` as two digits: 20 | 09 → 2009."""
+    result = high * 100 + low
+    return Step("Write them side by side", f"{high} | {low:02d} → {result}", Fraction(result))
+
+
+class UnitsSumToTen(WholeNumberTrick):
+    id = "mul-units-sum-10"
+    name = "Same tens, units add to 10"
+    summary = "43 × 47: tens × next number (4 × 5 = 20), then units × units (3 × 7 = 21) → 2021."
+    operation = MUL
+    priority = 85
+
+    def fits(self, left: int, right: int) -> bool:
+        (tens, unit), (other_tens, other_unit) = digits(left), digits(right)
+        return (
+            10 <= left <= 99
+            and 10 <= right <= 99
+            and tens == other_tens
+            and unit > 0
+            and other_unit > 0
+            and unit + other_unit == 10
+        )
+
+    def steps_for(self, left: int, right: int) -> Sequence[Step]:
+        (tens, unit), (_, other_unit) = digits(left), digits(right)
+        high = calc(f"{tens} times the next number", tens, MUL, tens + 1)
+        low = calc("Multiply the units", unit, MUL, other_unit)
+        return [high, low, _side_by_side(int(high.value), int(low.value))]
+
+    def example_operands(self, rng: Random) -> tuple[int, int]:
+        tens, unit = rng.randint(1, 9), rng.randint(1, 9)
+        return tens * 10 + unit, tens * 10 + 10 - unit
+
+
+class BaseHundred(WholeNumberTrick):
+    id = "mul-base-100"
+    name = "Near 100"
+    summary = (
+        "Both just below (or above) 100: cross-subtract (or add) the differences, "
+        "then append their product as two digits."
+    )
+    operation = MUL
+    priority = 85
+
+    def fits(self, left: int, right: int) -> bool:
+        below = 91 <= left <= 99 and 91 <= right <= 99
+        above = 101 <= left <= 109 and 101 <= right <= 109
+        return below or above
+
+    def steps_for(self, left: int, right: int) -> Sequence[Step]:
+        if left < 100:
+            gaps = 100 - left, 100 - right
+            high = calc(f"{right} is {gaps[1]} below 100: take that off {left}", left, SUB, gaps[1])
+        else:
+            gaps = left - 100, right - 100
+            high = calc(f"{right} is {gaps[1]} above 100: add that to {left}", left, ADD, gaps[1])
+        low = calc("Multiply the two differences from 100", gaps[0], MUL, gaps[1])
+        return [high, low, _side_by_side(int(high.value), int(low.value))]
+
+    def example_operands(self, rng: Random) -> tuple[int, int]:
+        if rng.random() < 0.7:
+            return rng.randint(91, 99), rng.randint(91, 99)
+        return rng.randint(101, 109), rng.randint(101, 109)
+
+
+class TeensTimesTeens(WholeNumberTrick):
+    id = "mul-teens"
+    name = "Teens × teens"
+    summary = "13 × 17: 13 + 7 = 20, times 10 = 200, plus 3 × 7 = 21 → 221."
+    operation = MUL
+    priority = 60
+
+    def fits(self, left: int, right: int) -> bool:
+        return 11 <= left <= 19 and 11 <= right <= 19
+
+    def steps_for(self, left: int, right: int) -> Sequence[Step]:
+        unit, other_unit = left - 10, right - 10
+        total = calc(f"Add {other_unit} (the units of {right}) to {left}", left, ADD, other_unit)
+        tens = calc("Times 10", total.value, MUL, 10)
+        units = calc("Multiply the units", unit, MUL, other_unit)
+        return [total, tens, units, calc("Add them", tens.value, ADD, units.value)]
+
+    def example_operands(self, rng: Random) -> tuple[int, int]:
+        return rng.randint(13, 19), rng.randint(13, 19)
+
+
+class CloseTogether(WholeNumberTrick):
+    id = "mul-close-together"
+    name = "Close together"
+    summary = "Same tens: (z + a)(z + b) = z × (z + a + b) + a × b, e.g. 43 × 48 = 40 × 51 + 3 × 8."
+    operation = MUL
+    priority = 45
+
+    def fits(self, left: int, right: int) -> bool:
+        return (
+            20 <= left <= 99
+            and 20 <= right <= 99
+            and left // 10 == right // 10
+            and left % 10 > 0
+            and right % 10 > 0
+        )
+
+    def steps_for(self, left: int, right: int) -> Sequence[Step]:
+        base = left - left % 10
+        unit, other_unit = left % 10, right % 10
+        total = calc(f"Add {other_unit} (the units of {right}) to {left}", left, ADD, other_unit)
+        product = calc(f"Times {base}", base, MUL, total.value)
+        units = calc("Multiply the units", unit, MUL, other_unit)
+        return [total, product, units, calc("Add them", product.value, ADD, units.value)]
+
+    def example_operands(self, rng: Random) -> tuple[int, int]:
+        tens = rng.randint(2, 9) * 10
+        return tens + rng.randint(1, 9), tens + rng.randint(1, 9)

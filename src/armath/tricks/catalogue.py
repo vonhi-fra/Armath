@@ -15,17 +15,21 @@ from armath.tricks.division import (
 from armath.tricks.fractions import FractionMethod
 from armath.tricks.inverse import MissingOperand
 from armath.tricks.multiplication import (
+    BaseHundred,
+    CloseTogether,
     DifferenceOfSquares,
     DoubleRepeatedly,
     HalveAndDouble,
     RoundUpMultiplication,
     SplitMultiplication,
     SquareEndingInFive,
+    TeensTimesTeens,
     TimesEleven,
     TimesFive,
     TimesNine,
     TimesQuarterOrHalfHundred,
     TimesTwelve,
+    UnitsSumToTen,
 )
 from armath.tricks.registry import TrickRegistry
 from armath.tricks.subtraction import (
@@ -58,6 +62,10 @@ def _direct_tricks() -> list[Trick]:
         DoubleRepeatedly(),
         DifferenceOfSquares(),
         SquareEndingInFive(),
+        UnitsSumToTen(),
+        BaseHundred(),
+        TeensTimesTeens(),
+        CloseTogether(),
         DecimalMethod(Operation.MULTIPLY),
         FriendlyDecimal(Operation.MULTIPLY),
         FractionMethod(Operation.MULTIPLY),
