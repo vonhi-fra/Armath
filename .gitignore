@@ -2,6 +2,25 @@
 CLAUDE.md
 .claude/settings.local.json
 
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.venv-wsl/
+dist/
+build/
+*.egg-info/
+
+# Tool caches and reports
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
 # OS
 .DS_Store
 Thumbs.db
