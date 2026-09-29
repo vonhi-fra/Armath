@@ -69,6 +69,12 @@ def infer_style(value: Fraction, *operand_styles: NumberStyle) -> NumberStyle:
     return NumberStyle.DECIMAL
 
 
+def format_value(value: Fraction | int) -> str:
+    """Write a value in its most natural style: ``12``, ``0.125`` or ``1/3``."""
+    value = Fraction(value)
+    return format_number(value, infer_style(value))
+
+
 @dataclass(frozen=True)
 class Operand:
     """An exact number together with the way it is shown to the user."""

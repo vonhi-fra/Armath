@@ -16,6 +16,8 @@ uv run ruff check          # lint
 uv run ruff format         # format
 uv run mypy                # type check
 uv run armath              # play in the terminal
+uv run armath explain "858 / 11"   # step-by-step trick for a problem (--all for every trick)
+uv run armath tricks       # list the trick catalogue
 ```
 
 ### Web version

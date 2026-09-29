@@ -197,8 +197,9 @@ Backlog (not urgent):
 ## 9. Roadmap
 
 1. ~~Scaffold~~ 2. ~~Domain, Zetamac generator, sessions, CLI~~ 3. ~~Web version~~
-4. **Trick engine:** base, registry, explanations, property tests; first tricks for Zetamac ranges
-   (A1–A2, S1–S3, M1–M9, D1–D5).
+4. ~~**Trick engine:** base, registry, explanations, property tests; first tricks for Zetamac ranges
+   (A1–A2, S1–S3, M1–M9, D1–D5).~~ Done, except that M9 became "×4 and ×8 by doubling" (the
+   factoring idea is covered by halve-and-double) and D3 "halve both" requires a quotient above 12.
 5. **Learning mode:** explanations on the results screen, trick drills (blocked → interleaved),
    trick library screen.
 6. **Analytics:** feature buckets, baselines, weakness scores, recommender, progress screen.
