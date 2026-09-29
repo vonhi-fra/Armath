@@ -11,6 +11,7 @@ from armath.modes import Clock, SessionPlan
 from armath.persistence import Backup, HistoryRepository, SettingsRepository
 from armath.tricks import TrickRegistry
 from armath.ui.presenters import (
+    COUNTDOWN_SECONDS,
     BackupPresenter,
     FactsPresenter,
     GamePresenter,
@@ -52,13 +53,16 @@ class App:
         registry: TrickRegistry,
         clock: Clock,
         rng: Random,
+        countdown_seconds: int = COUNTDOWN_SECONDS,
     ) -> None:
         self._navigator = navigator
         self._history = history
         self._settings = settings
         self._registry = registry
         self._home = HomePresenter(home_view, history, settings, registry)
-        self._game = GamePresenter(game_view, clock, rng, on_finished=self._finished)
+        self._game = GamePresenter(
+            game_view, clock, rng, on_finished=self._finished, countdown_seconds=countdown_seconds
+        )
         self._results = ResultsPresenter(results_view, registry)
         self._library = LibraryPresenter(library_view, registry)
         self._progress = ProgressPresenter(progress_view, history, registry)

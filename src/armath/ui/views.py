@@ -7,7 +7,7 @@ from enum import StrEnum
 from typing import Protocol
 
 from armath.analytics import KindInsight, ModeProgress, SessionSummary, TrickInsight
-from armath.facts import DeckProgress, FactsReport
+from armath.facts import DeckProgress, FactsAdvice, FactsReport
 from armath.learning import DrillReport, LibraryEntry, ReviewItem, TrickLesson
 from armath.ui.charts import LineChartLayout
 from armath.ui.settings_form import SettingsForm
@@ -52,6 +52,8 @@ class HomeView(Protocol):
 
     def show_recommendations(self, tricks: Sequence[TrickInsight]) -> None: ...
 
+    def show_facts_advice(self, advice: FactsAdvice | None) -> None: ...
+
 
 class GameView(Protocol):
     def show_problem(self, prompt: str) -> None: ...
@@ -74,6 +76,10 @@ class GameView(Protocol):
 
     def show_choices(self, labels: Sequence[str] | None) -> None:
         """Multiple-choice options instead of the answer box (``None``: typed answers)."""
+        ...
+
+    def show_countdown(self, seconds: int | None) -> None:
+        """Seconds until the session begins; ``None`` once it has begun."""
         ...
 
 

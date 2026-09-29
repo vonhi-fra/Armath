@@ -227,9 +227,15 @@ Backlog (not urgent):
      answer character) and corrections; 30-fact sessions (due → up to 8 new → review ahead),
      missed facts re-asked 3 problems later (max twice). Memory is replayed from history, so it
      needs no storage of its own. Facts screen with a times-table mastery grid.
-   - Next: 3-2-1 start; self-hosted fonts; still-missing catalogue items (M17 up-and-down
-     squaring, M18 cross multiplication, percentages F2, MC elimination E1–E4); per-trick
-     look-alikes; recommending facts decks from slow table facts in practice sessions.
+   - ~~3-2-1 countdown~~ (the session's clock starts after it); ~~self-hosted fonts~~ (Inter and
+     JetBrains Mono, Latin subset, OFL licences in `web/fonts/`); ~~M17 up-and-down squaring,
+     M18 vertically and crosswise~~ (50 tricks); ~~MC elimination~~ E1 last digit and E2
+     magnitude as "quick checks" on wrong answers in the review (E3 digit sums and E4 parity
+     add little beyond those); ~~near-miss look-alikes~~ (a trick problem nudged by 1–2 until
+     the trick stops applying); ~~facts advice~~ (home suggests the times-table deck after
+     3+ slow table facts in practice, incl. division by a table fact).
+   - Not planned: percentages (F2) need a new problem type that neither Zetamac nor the
+     reported Optiver content uses; add it if a target test needs it.
 
 (Tricks moved ahead of analytics: the learning loop can start from "your slowest problems" right away,
 and weakness detection then has trick applicability to aggregate by.)

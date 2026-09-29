@@ -22,6 +22,7 @@ class SiteHandler(SimpleHTTPRequestHandler):
         ".svg": "image/svg+xml",
         ".wasm": "application/wasm",
         ".whl": "application/zip",
+        ".woff2": "font/woff2",
     }
 
     def end_headers(self) -> None:

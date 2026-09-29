@@ -114,6 +114,21 @@ MUL, DIV, ADD = Operation.MULTIPLY, Operation.DIVIDE, Operation.ADD
             ["1 × 2 = 2", "3 × 7 = 21", "2 | 21 → 221"],
         ),
         (
+            _problem("47 x 47"),
+            "mul-square-up-down",
+            ["44 × 50 = 2200", "3 × 3 = 9", "2200 + 9 = 2209"],
+        ),
+        (
+            _problem("23 x 23"),
+            "mul-square-up-down",
+            ["20 × 26 = 520", "3 × 3 = 9", "520 + 9 = 529"],
+        ),
+        (
+            _problem("23 x 47"),
+            "mul-cross",
+            ["2 × 4 = 8", "2 × 7 + 3 × 4 = 26", "3 × 7 = 21", "800 + 260 + 21 = 1081"],
+        ),
+        (
             _problem("43 x 48"),
             "mul-close-together",
             ["43 + 8 = 51", "40 × 51 = 2040", "3 × 8 = 24", "2040 + 24 = 2064"],

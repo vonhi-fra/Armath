@@ -5,6 +5,7 @@ from random import Random
 
 from armath.domain import Attempt, Operand, Operation, Problem, SessionRecord
 from armath.domain.numbers import can_write, infer_style
+from armath.learning.elimination import rule_out
 from armath.tricks import Explanation, Trick, TrickRegistry
 
 
@@ -45,6 +46,8 @@ class ReviewItem:
     lesson: TrickLesson | None
     wrong_answer: str | None = None
     """What the user answered, if it was wrong (multiple-choice sessions)."""
+    ruled_out: str | None = None
+    """How the wrong answer could have been rejected at a glance."""
 
 
 def review(record: SessionRecord, registry: TrickRegistry, count: int = 5) -> list[ReviewItem]:
@@ -59,6 +62,7 @@ def review(record: SessionRecord, registry: TrickRegistry, count: int = 5) -> li
             corrections=attempt.corrections,
             lesson=lesson_for(attempt.problem, registry),
             wrong_answer=None if attempt.is_correct else _as_answer(attempt),
+            ruled_out=rule_out(attempt.problem, attempt.response),
         )
         for attempt in ordered[:count]
     ]

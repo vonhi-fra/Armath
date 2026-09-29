@@ -46,7 +46,8 @@ def test_explain_every_trick() -> None:
 
     explain("11 x 68", default_registry(), output.append, every_trick=True)
 
-    assert sum(line == "  Answer: 748" for line in output) == 3
+    # ×11, round and compensate, vertically and crosswise, split and add
+    assert sum(line == "  Answer: 748" for line in output) == 4
 
 
 def test_explain_reports_bad_input() -> None:

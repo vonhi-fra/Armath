@@ -10,7 +10,7 @@ from factories import START, attempt, problem, record
 
 from armath.analytics import SessionSummary, TrickInsight
 from armath.domain import Operation, SessionKind
-from armath.facts import DeckProgress, FactsReport
+from armath.facts import DeckProgress, FactsAdvice, FactsReport
 from armath.learning import DrillReport, LibraryEntry, ReviewItem, TrickLesson
 from armath.modes import ManualClock
 from armath.persistence import MemoryStore, StoredHistory, StoredSettings
@@ -42,8 +42,10 @@ class FakeScreen:
         self.library: list[LibraryEntry] = []
         self.recommended: list[TrickInsight] = []
         self.choices: list[str] | None = None
+        self.countdown: int | None = None
         self.download: tuple[str, str] | None = None
         self.decks: list[DeckProgress] = []
+        self.facts_advice: FactsAdvice | None = None
         self.facts_report: FactsReport | None = None
         self.backup_message: tuple[str, bool] | None = None
         self.progress: ProgressReport | None = None
@@ -84,6 +86,9 @@ class FakeScreen:
     def show_choices(self, labels: Sequence[str] | None) -> None:
         self.choices = None if labels is None else list(labels)
 
+    def show_countdown(self, seconds: int | None) -> None:
+        self.countdown = seconds
+
     def show_summary(self, summary: SessionSummary) -> None:
         self.summary = summary
 
@@ -98,6 +103,9 @@ class FakeScreen:
 
     def show_recommendations(self, tricks: Sequence[TrickInsight]) -> None:
         self.recommended = list(tricks)
+
+    def show_facts_advice(self, advice: FactsAdvice | None) -> None:
+        self.facts_advice = advice
 
     def show_progress(self, report: ProgressReport) -> None:
         self.progress = report
@@ -116,7 +124,9 @@ class FakeScreen:
 
 
 class Harness:
-    def __init__(self) -> None:
+    """The app on a fake screen; no countdown unless asked, so sessions begin at once."""
+
+    def __init__(self, countdown_seconds: int = 0) -> None:
         self.screen = FakeScreen()
         self.clock = ManualClock(START)
         self.store = MemoryStore()
@@ -134,6 +144,7 @@ class Harness:
             registry=default_registry(),
             clock=self.clock,
             rng=Random(0),
+            countdown_seconds=countdown_seconds,
         )
 
     def current_answer(self) -> str:
@@ -582,12 +593,57 @@ def test_play_again_after_facts_repeats_the_deck(harness: Harness) -> None:
     assert harness.screen.time == "1 / 15"
 
 
+def test_home_suggests_times_tables_after_slow_table_facts(harness: Harness) -> None:
+    slow = [
+        attempt(problem(a, Operation.MULTIPLY, b), seconds=4) for a, b in ((7, 8), (6, 7), (9, 6))
+    ]
+    StoredHistory(harness.store).add(record(attempt(), *slow))
+
+    harness.app.open_home()
+
+    advice = harness.screen.facts_advice
+    assert advice is not None
+    assert advice.deck_id == "tables-12"
+    assert advice.slow_facts == ("7 × 8", "6 × 7", "6 × 9")
+
+
 def test_unknown_deck_is_ignored(harness: Harness) -> None:
     harness.app.open_facts()
 
     harness.app.start_facts("no-such-deck")
 
     assert harness.screen.screen is Screen.FACTS
+
+
+def test_countdown_before_the_session_begins() -> None:
+    harness = Harness(countdown_seconds=3)
+    harness.start(seconds=30)
+
+    assert harness.screen.countdown == 3
+    assert harness.screen.problem == ""
+    harness.app.answer("5")  # typing during the countdown is ignored
+
+    harness.clock.advance(1.5)
+    harness.app.tick()
+    assert harness.screen.countdown == 2
+
+    harness.clock.advance(1.5)
+    harness.app.tick()
+    assert harness.screen.countdown is None
+    assert harness.screen.problem.endswith("= ?")
+    assert harness.screen.time == "0:30"  # the session's clock starts now, not at "Start"
+
+
+def test_leaving_during_the_countdown_cancels_it() -> None:
+    harness = Harness(countdown_seconds=3)
+    harness.start()
+
+    harness.app.open_home()
+    harness.clock.advance(5)
+    harness.app.tick()
+
+    assert harness.screen.screen is Screen.HOME
+    assert harness.screen.problem == ""
 
 
 def test_library_lists_every_trick(harness: Harness) -> None:

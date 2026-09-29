@@ -1,3 +1,20 @@
+/* ---------- Fonts (self-hosted, Latin subset; SIL Open Font License, see fonts/) ---------- */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("fonts/inter-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url("fonts/jetbrains-mono-latin.woff2") format("woff2");
+}
+
 /* ---------- Theme tokens ---------- */
 :root,
 :root[data-theme="light"] {
@@ -591,6 +608,24 @@ body.loading .nav {
   background: var(--accent-soft);
 }
 
+/* ---------- Countdown ---------- */
+.counting .problem {
+  color: var(--accent);
+  font-size: clamp(3rem, 14vw, 6rem);
+  animation: pulse 1s ease-out infinite;
+}
+
+.counting .hud {
+  visibility: hidden;
+}
+
+@keyframes pulse {
+  from {
+    opacity: 0.4;
+    transform: scale(0.92);
+  }
+}
+
 /* ---------- Multiple choice ---------- */
 .choices {
   display: grid;
@@ -625,7 +660,16 @@ body.loading .nav {
   font-size: 0.8rem;
 }
 
-.optiver-card {
+.recommendation-card h2 {
+  margin-bottom: 4px;
+}
+
+.recommendation-card p {
+  margin: 0;
+}
+
+.optiver-card,
+.recommendation-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -642,6 +686,13 @@ body.loading .nav {
 
 .review-item.wrong > summary .meta {
   color: var(--bad);
+}
+
+.ruled-out {
+  margin: 0 16px 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
 }
 
 /* ---------- Coaching during a drill ---------- */
@@ -1210,7 +1261,8 @@ body.failed #loading-status {
     margin-left: 0;
   }
 
-  .optiver-card {
+  .optiver-card,
+  .recommendation-card {
     flex-direction: column;
     align-items: stretch;
   }

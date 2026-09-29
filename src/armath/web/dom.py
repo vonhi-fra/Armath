@@ -28,7 +28,7 @@ from pyodide.ffi import (  # type: ignore[import-not-found]
 
 from armath.analytics import ScorePoint, SessionSummary, TrickInsight
 from armath.domain import Operation
-from armath.facts import DeckProgress, FactsReport
+from armath.facts import DeckProgress, FactsAdvice, FactsReport
 from armath.learning import DrillReport, LibraryEntry, ReviewItem, TrickLesson
 from armath.modes import SystemClock
 from armath.persistence import MemoryStore, StoredHistory, StoredSettings
@@ -281,6 +281,19 @@ class DomHomeView:
             box.appendChild(item)
         _element("recommendations").hidden = not tricks
 
+    def show_facts_advice(self, advice: FactsAdvice | None) -> None:
+        box = _element("facts-advice")
+        box.hidden = advice is None
+        if advice is None:
+            return
+        examples = ", ".join(advice.slow_facts)
+        more = "" if advice.count <= len(advice.slow_facts) else ", …"
+        _element("facts-advice-text").textContent = (
+            f"{advice.count} times-table facts were slow in your recent practice "
+            f"({examples}{more}). They should come instantly: drill them in Facts."
+        )
+        _element("facts-advice-button").dataset.deck = advice.deck_id
+
 
 class DomGameView:
     def show_problem(self, prompt: str) -> None:
@@ -322,7 +335,19 @@ class DomGameView:
             button.appendChild(_create("span", label))
             box.appendChild(button)
         box.hidden = labels is None
-        _element("answer").hidden = labels is not None
+        answer = _element("answer")
+        answer.hidden = labels is not None
+        if labels is None:
+            answer.focus()  # it may have been hidden during the countdown
+
+    def show_countdown(self, seconds: int | None) -> None:
+        stage = _element("screen-game")
+        stage.classList.toggle("counting", seconds is not None)
+        if seconds is not None:
+            _element("problem").textContent = str(seconds)
+            _element("answer").hidden = True
+            _element("choices").hidden = True
+            _element("hint").hidden = True
 
 
 class DomResultsView:
@@ -351,6 +376,11 @@ class DomResultsView:
             if item.lesson is not None:
                 summary.appendChild(_create("span", item.lesson.trick_name, "tag"))
             details.appendChild(summary)
+            if item.ruled_out is not None:
+                check = _create("p", class_name="ruled-out")
+                check.appendChild(_create("strong", "Quick check: "))
+                check.appendChild(document.createTextNode(item.ruled_out))
+                details.appendChild(check)
             if item.lesson is not None:
                 details.appendChild(_lesson(item.lesson))
             box.appendChild(details)

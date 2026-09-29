@@ -1,5 +1,6 @@
 """One presenter per screen; each owns its view and nothing else."""
 
+import math
 from collections.abc import Callable, Sequence
 from random import Random
 from typing import Protocol
@@ -13,7 +14,7 @@ from armath.analytics import (
     trick_insights,
 )
 from armath.domain import Attempt, Problem, SessionRecord
-from armath.facts import DECKS, FactMemory, FactsReport, deck_progress
+from armath.facts import DECKS, FactMemory, FactsReport, advise, deck_progress
 from armath.learning import Drill, TrickLesson, library, review
 from armath.modes import Clock, Session, SessionPlan
 from armath.persistence import (
@@ -42,6 +43,8 @@ from armath.ui.views import (
 
 RECENT_SESSIONS = 10
 REVIEWED_PROBLEMS = 5
+COUNTDOWN_SECONDS = 3
+"""So the first problem's time doesn't include reacting to the screen change."""
 
 
 class HomePresenter:
@@ -62,6 +65,7 @@ class HomePresenter:
         self._view.show_settings(SettingsForm.from_settings(self._settings.load()))
         self._view.show_form_errors([])
         self._view.show_recommendations(recommendations(trick_insights(records, self._registry)))
+        self._view.show_facts_advice(advise(records))
         self._view.show_history(recent_history(records))
 
     def submit(self, form: SettingsForm) -> PracticeSettings | None:
@@ -101,19 +105,35 @@ class GamePresenter:
         clock: Clock,
         rng: Random,
         on_finished: Callable[[SessionRecord], None],
+        countdown_seconds: int = COUNTDOWN_SECONDS,
     ) -> None:
         self._view = view
         self._clock = clock
         self._rng = rng
         self._on_finished = on_finished
+        self._countdown_seconds = countdown_seconds
         self._session: Session | None = None
         self._coach: Coach | None = None
+        self._waiting: SessionPlan | None = None
+        self._go_at = 0.0
 
     def start(self, plan: SessionPlan, coach: Coach | None = None) -> None:
-        self._session = Session(plan, self._clock, self._rng)
+        """Count down, then begin; the session's clock starts only when it begins."""
+        self._session = None
         self._coach = coach
         self._view.enable_reveal(coach is not None)
         self._view.show_score(0)
+        if self._countdown_seconds <= 0:
+            self._begin(plan)
+            return
+        self._waiting = plan
+        self._go_at = self._clock.monotonic() + self._countdown_seconds
+        self._view.show_countdown(self._countdown_seconds)
+
+    def _begin(self, plan: SessionPlan) -> None:
+        self._waiting = None
+        self._view.show_countdown(None)
+        self._session = Session(plan, self._clock, self._rng)
         self._show_problem(self._session)
 
     def answer(self, text: str) -> None:
@@ -148,6 +168,13 @@ class GamePresenter:
             self._view.show_steps(self._coach.lesson(self._session.current))
 
     def tick(self) -> None:
+        if self._waiting is not None:
+            left = self._go_at - self._clock.monotonic()
+            if left <= 0:
+                self._begin(self._waiting)
+            else:
+                self._view.show_countdown(math.ceil(left))
+            return
         session = self._session
         if session is None:
             return
@@ -156,8 +183,9 @@ class GamePresenter:
             self._finish(session)
 
     def quit(self) -> None:
-        """Abandon the session without reporting it."""
+        """Abandon the session (or the countdown) without reporting it."""
         self._session = None
+        self._waiting = None
 
     def _show_problem(self, session: Session) -> None:
         self._view.clear_answer()

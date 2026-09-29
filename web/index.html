@@ -6,9 +6,7 @@
   <title>Armath</title>
   <meta name="description" content="Mental arithmetic trainer for quant interviews.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <script src="theme.js"></script>
   <script type="module" src="main.js"></script>
@@ -112,6 +110,14 @@
             missing numbers. +1 for a right answer, −1 for a wrong one. Pick with the keys 1–4.</p>
         </div>
         <button id="start-optiver" class="button primary" type="button">Start test</button>
+      </section>
+
+      <section id="facts-advice" class="card recommendation-card" hidden>
+        <div>
+          <h2>Times tables</h2>
+          <p id="facts-advice-text" class="muted"></p>
+        </div>
+        <button id="facts-advice-button" class="button primary small" type="button">Practise facts</button>
       </section>
 
       <section id="recommendations" class="card" aria-labelledby="recommendations-title" hidden>

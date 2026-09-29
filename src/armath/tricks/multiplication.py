@@ -483,6 +483,64 @@ class TeensTimesTeens(WholeNumberTrick):
         return rng.randint(13, 19), rng.randint(13, 19)
 
 
+class SquareUpAndDown(WholeNumberTrick):
+    id = "mul-square-up-down"
+    name = "Squaring up and down"
+    summary = "a² = (a − d)(a + d) + d²: move to the nearest ten, e.g. 47² = 44 × 50 + 3²."
+    operation = MUL
+    priority = 50
+
+    def fits(self, left: int, right: int) -> bool:
+        return left == right and 11 <= left <= 99 and left % 10 not in (0, 5)
+
+    def steps_for(self, left: int, right: int) -> Sequence[Step]:
+        unit = left % 10
+        distance = unit if unit < 5 else 10 - unit
+        down, up = left - distance, left + distance
+        product = calc(f"Go {distance} down to {down} and {distance} up to {up}", down, MUL, up)
+        square = calc(f"Add {distance} squared", distance, MUL, distance)
+        return [product, square, calc("Add them", product.value, ADD, square.value)]
+
+    def example_operands(self, rng: Random) -> tuple[int, int]:
+        value = rng.randint(1, 9) * 10 + rng.choice((1, 2, 3, 4, 6, 7, 8, 9))
+        return value, value
+
+
+class CrossMultiplication(WholeNumberTrick):
+    id = "mul-cross"
+    name = "Vertically and crosswise"
+    summary = "Two-digit × two-digit: tens × tens | the two cross products | units × units."
+    operation = MUL
+    priority = 20
+
+    def fits(self, left: int, right: int) -> bool:
+        return 10 <= left <= 99 and 10 <= right <= 99
+
+    def steps_for(self, left: int, right: int) -> Sequence[Step]:
+        (tens, unit), (other_tens, other_unit) = digits(left), digits(right)
+        hundreds = calc("Tens × tens", tens, MUL, other_tens)
+        cross = tens * other_unit + unit * other_tens
+        units = calc("Units × units", unit, MUL, other_unit)
+        total = int(hundreds.value) * 100 + cross * 10 + int(units.value)
+        return [
+            hundreds,
+            Step(
+                "Crosswise",
+                f"{tens} × {other_unit} + {unit} × {other_tens} = {cross}",
+                Fraction(cross),
+            ),
+            units,
+            Step(
+                "Combine as hundreds, tens and units",
+                f"{int(hundreds.value) * 100} + {cross * 10} + {int(units.value)} = {total}",
+                Fraction(total),
+            ),
+        ]
+
+    def example_operands(self, rng: Random) -> tuple[int, int]:
+        return rng.randint(21, 89), rng.randint(21, 89)
+
+
 class CloseTogether(WholeNumberTrick):
     id = "mul-close-together"
     name = "Close together"

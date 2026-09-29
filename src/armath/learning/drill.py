@@ -11,16 +11,18 @@ from random import Random
 from statistics import fmean
 
 from armath.analytics import first_try_rate
-from armath.domain import Attempt, Problem, SessionKind, SessionRecord
+from armath.domain import Attempt, Operand, Operation, Problem, SessionKind, SessionRecord
 from armath.generators import (
     FilteredGenerator,
+    MixedGenerator,
     ProblemGenerator,
     ZetamacSettings,
     zetamac_generator,
 )
 from armath.learning.review import TrickLesson, lesson_for
 from armath.modes import CorrectCount, SessionPlan, UntilCorrect
-from armath.tricks import Trick, TrickRegistry
+from armath.tricks import Trick, TrickRegistry, WholeNumberTrick
+from armath.tricks.base import whole_operands
 
 
 @dataclass(frozen=True)
@@ -64,15 +66,59 @@ class DrillGenerator:
         return self._lookalikes.generate(rng)
 
 
-def lookalikes_for(trick: Trick) -> ProblemGenerator | None:
-    """Zetamac-style problems of the same operation that the trick does *not* apply to.
+class NearMissGenerator:
+    """The trick's own problems with one number nudged until the trick stops applying.
 
-    ``None`` for general methods, which apply to everything.
+    ``11 × 47`` becomes ``12 × 47``, ``65 × 65`` becomes ``65 × 66``: problems that *look* like
+    the trick, so the drill trains spotting when it really applies.
+    """
+
+    def __init__(self, trick: Trick, fallback: ProblemGenerator, max_tries: int = 20) -> None:
+        self._trick = trick
+        self._fallback = fallback
+        self._max_tries = max_tries
+
+    def generate(self, rng: Random) -> Problem:
+        for _ in range(self._max_tries):
+            nudged = _nudge(self._trick.generate(rng), rng)
+            if nudged is not None and not self._trick.applies_to(nudged):
+                return nudged
+        # Some tricks survive small nudges (132 − 87 still crosses a hundred as 132 − 89).
+        return self._fallback.generate(rng)
+
+
+def _nudge(problem: Problem, rng: Random) -> Problem | None:
+    """Change one operand by 1 or 2, keeping division exact; ``None`` if that doesn't work."""
+    operands = whole_operands(problem)
+    if operands is None:
+        return None
+    left, right = operands
+    step = rng.choice((-2, -1, 1, 2))
+    if problem.operation is Operation.DIVIDE:
+        quotient, divisor = left // right, right + step  # new divisor, same quotient
+        left, right = quotient * divisor, divisor
+    elif rng.random() < 0.5:
+        left += step
+    else:
+        right += step
+    if left < 1 or right < 2 or (problem.operation is Operation.SUBTRACT and left < right):
+        return None
+    return Problem.create(Operand.integer(left), problem.operation, Operand.integer(right))
+
+
+def lookalikes_for(trick: Trick) -> ProblemGenerator | None:
+    """Problems of the same operation that the trick does *not* apply to.
+
+    Half are near misses of the trick's own problems (for whole-number tricks), half ordinary
+    Zetamac-style problems. ``None`` for general methods, which apply to everything.
     """
     if trick.fallback:
         return None
     same_operation = zetamac_generator(ZetamacSettings(operations=frozenset({trick.operation})))
-    return FilteredGenerator(same_operation, lambda problem: not trick.applies_to(problem))
+    ordinary = FilteredGenerator(same_operation, lambda problem: not trick.applies_to(problem))
+    if not isinstance(trick, WholeNumberTrick):
+        return ordinary
+    return MixedGenerator([NearMissGenerator(trick, fallback=ordinary), ordinary])
 
 
 @dataclass(frozen=True)

@@ -7,7 +7,8 @@ from armath.domain import Operand, Operation, Problem
 from armath.generators import FilteredGenerator, RangeGenerator
 from armath.generators.ranges import IntRange
 from armath.learning import Drill, DrillGenerator, DrillSettings, lookalikes_for
-from armath.tricks import default_registry
+from armath.learning.drill import NearMissGenerator
+from armath.tricks import Trick, WholeNumberTrick, default_registry
 
 REGISTRY = default_registry()
 TIMES_ELEVEN = REGISTRY.get("mul-11")
@@ -33,6 +34,34 @@ def test_mixed_round_includes_lookalikes_of_the_same_operation() -> None:
     assert all(p.operation is Operation.MULTIPLY for p in problems)
     with_trick = sum(TIMES_ELEVEN.applies_to(p) for p in problems)
     assert 60 < with_trick < 140
+
+
+@pytest.mark.parametrize(
+    "trick",
+    [t for t in REGISTRY.all() if isinstance(t, WholeNumberTrick) and not t.fallback],
+    ids=lambda trick: trick.id,
+)
+def test_near_misses_look_like_the_trick_but_it_does_not_apply(trick: Trick) -> None:
+    lookalikes = lookalikes_for(trick)
+    assert lookalikes is not None
+    generator = NearMissGenerator(trick, fallback=lookalikes)
+    rng = Random(0)
+
+    for _ in range(30):
+        problem = generator.generate(rng)
+        assert problem.operation is trick.operation
+        assert not trick.applies_to(problem)
+        assert problem.answer.value.denominator == 1
+
+
+def test_near_misses_of_times_eleven_change_one_number_slightly() -> None:
+    never = FilteredGenerator(TIMES_ELEVEN, lambda problem: False, max_tries=1)
+    generator = NearMissGenerator(TIMES_ELEVEN, fallback=never)  # fallback would raise
+    rng = Random(3)
+
+    factors = [generator.generate(rng) for _ in range(40)]
+
+    assert all(9 <= p.left.value <= 13 and p.left.value != 11 for p in factors)
 
 
 def test_general_methods_have_no_lookalikes() -> None:
