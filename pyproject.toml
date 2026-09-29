@@ -21,7 +21,7 @@ build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["--strict-markers", "--strict-config", "-ra"]
+addopts = ["--strict-markers", "--strict-config", "-ra", "--import-mode=importlib"]
 
 [tool.coverage.run]
 source = ["armath"]
@@ -43,6 +43,8 @@ select = [
     "RUF",
     "PT",      # pytest style
 ]
+# Real math symbols are used on purpose for display.
+allowed-confusables = ["−", "×", "÷"]
 
 [tool.mypy]
 strict = true
