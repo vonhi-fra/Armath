@@ -211,7 +211,13 @@ Backlog (not urgent):
    credited to each problem's best trick → recommendations on the home screen. Progress screen:
    score chart per mode, per-trick table with older-vs-newer trend, per-problem-kind table.
    Later: per-kind expected times as the yardstick, multiplication heatmap.
-7. **Optiver 80-in-8:** decimals/fractions, missing operand, MC with distractors, ±1 scoring, O-tricks.
+7. ~~**Optiver 80-in-8:** decimals/fractions, missing operand, MC with distractors, ±1 scoring,
+   O-tricks.~~ Done: `generators/optiver.py` (integers, decimals, fractions, 25% missing operand),
+   `modes/choices.py` (close distractors + one decimal-point slip), preset `optiver()`.
+   New tricks: general methods for decimals (incl. long division like 39 ÷ 2 = 19.5), fractions and
+   missing operands (undo, then the best trick for the rewritten problem), M11, M16, D8 (= decimal
+   division method), D9 cancel zeros, M4/F5 as "decimal as a fraction". Not yet: M12 close
+   together, M13, M14 base 100, M15 teens, M17–M18, percentages (F2), MC elimination (E1–E4).
 8. **Polish:** facts mode with spaced repetition, backlog items, GitHub Pages deploy.
 
 (Tricks moved ahead of analytics: the learning loop can start from "your slowest problems" right away,

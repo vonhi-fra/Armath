@@ -1,6 +1,8 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from datetime import timedelta
+from fractions import Fraction
+from operator import add, mul, sub, truediv
 from random import Random
 
 import pytest
@@ -38,6 +40,7 @@ class FakeScreen:
         self.drill_report: DrillReport | None = None
         self.library: list[LibraryEntry] = []
         self.recommended: list[TrickInsight] = []
+        self.choices: list[str] | None = None
         self.progress: ProgressReport | None = None
 
     def go_to(self, screen: Screen) -> None:
@@ -72,6 +75,9 @@ class FakeScreen:
 
     def enable_reveal(self, enabled: bool) -> None:
         self.reveal_enabled = enabled
+
+    def show_choices(self, labels: Sequence[str] | None) -> None:
+        self.choices = None if labels is None else list(labels)
 
     def show_summary(self, summary: SessionSummary) -> None:
         self.summary = summary
@@ -381,6 +387,96 @@ def test_progress_without_history(harness: Harness) -> None:
     harness.app.open_progress()
 
     assert harness.screen.progress == ProgressReport((), None, None, (), ())
+
+
+def _correct_choice(harness: Harness) -> int:
+    """Index of the right option, found by trying each on a copy of the problem."""
+    problem = parse_problem_prompt(harness.screen.problem)
+    assert harness.screen.choices is not None
+    for index, label in enumerate(harness.screen.choices):
+        if problem(label):
+            return index
+    raise AssertionError("no option is correct")
+
+
+def parse_problem_prompt(prompt: str) -> Callable[[str], bool]:
+    """A checker for options of ``a op b = c`` with one part replaced by ``?``."""
+    left, symbol, right, _, result = prompt.split(" ")
+    functions = {"+": add, "−": sub, "×": mul, "÷": truediv}
+
+    def holds(option: str) -> bool:
+        a, b, c = (Fraction(option if part == "?" else part) for part in (left, right, result))
+        return bool(functions[symbol](a, b) == c)
+
+    return holds
+
+
+def test_optiver_uses_multiple_choice_and_scores_plus_minus_one(harness: Harness) -> None:
+    harness.app.start_optiver()
+
+    assert harness.screen.choices is not None
+    assert len(harness.screen.choices) == 4
+    assert harness.screen.status_label == "Time"
+    assert harness.screen.time == "8:00 · 1 / 80"
+
+    right = _correct_choice(harness)
+    harness.app.choose(right)
+    wrong = next(i for i in range(4) if i != _correct_choice(harness))
+    harness.app.choose(wrong)
+    harness.app.choose(_correct_choice(harness))
+
+    assert harness.screen.score == 1
+    assert harness.screen.time == "8:00 · 4 / 80"
+
+
+def test_optiver_ends_after_80_questions_and_reviews_wrong_answers_first(
+    harness: Harness,
+) -> None:
+    harness.app.start_optiver()
+    for question in range(80):
+        correct = _correct_choice(harness)
+        harness.app.choose(correct if question else (correct + 1) % 4)
+
+    assert harness.screen.screen is Screen.RESULTS
+    assert harness.screen.summary is not None
+    assert harness.screen.summary.score == 78
+    assert harness.screen.review[0].wrong_answer is not None
+    assert all(item.wrong_answer is None for item in harness.screen.review[1:])
+    assert StoredHistory(harness.store).all()[0].mode == "Optiver 80 in 8"
+
+
+def test_optiver_ends_when_time_runs_out(harness: Harness) -> None:
+    harness.app.start_optiver()
+    harness.clock.advance(8 * 60)
+
+    harness.app.tick()
+
+    assert harness.screen.screen is Screen.RESULTS
+
+
+def test_invalid_choice_is_ignored(harness: Harness) -> None:
+    harness.app.start_optiver()
+    problem = harness.screen.problem
+
+    harness.app.choose(7)
+
+    assert harness.screen.problem == problem
+
+
+def test_play_again_after_optiver_repeats_optiver(harness: Harness) -> None:
+    harness.app.start_optiver()
+    harness.clock.advance(8 * 60)
+    harness.app.tick()
+
+    harness.app.play_again()
+
+    assert harness.screen.choices is not None
+
+
+def test_practice_has_no_choices(harness: Harness) -> None:
+    harness.start()
+
+    assert harness.screen.choices is None
 
 
 def test_library_lists_every_trick(harness: Harness) -> None:

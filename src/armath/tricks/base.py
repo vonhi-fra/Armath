@@ -3,7 +3,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from random import Random
-from typing import ClassVar
 
 from armath.domain import Operand, Operation, Problem, Unknown
 from armath.tricks.explanation import Explanation, Step
@@ -15,16 +14,18 @@ class Trick(ABC):
     A trick knows when it applies, how to explain a specific problem step by step and how to
     produce practice problems for itself; it is therefore also a ``ProblemGenerator``.
     Adding a trick means adding a subclass and registering it; nothing else changes.
+    Metadata is usually set as class attributes; a trick that works the same way for every
+    operation may set it per instance instead.
     """
 
-    id: ClassVar[str]
-    name: ClassVar[str]
-    summary: ClassVar[str]
+    id: str
+    name: str
+    summary: str
     """The rule in one line, e.g. "×5 = ×10, then halve"."""
-    operation: ClassVar[Operation]
-    priority: ClassVar[int]
+    operation: Operation
+    priority: int
     """When several tricks apply, the highest priority is suggested first."""
-    fallback: ClassVar[bool] = False
+    fallback: bool = False
     """A general method that applies to every problem of its kind."""
 
     @abstractmethod

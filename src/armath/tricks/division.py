@@ -178,6 +178,46 @@ class DivideByNine(WholeNumberTrick):
         return 9 * quotient, 9
 
 
+class CancelZeros(WholeNumberTrick):
+    id = "div-cancel-zeros"
+    name = "Cancel zeros"
+    summary = "Cross out the same number of trailing zeros in both, e.g. 63000 ÷ 700 = 630 ÷ 7."
+    operation = DIV
+    priority = 70
+
+    def fits(self, left: int, right: int) -> bool:
+        zeros = _common_zeros(left, right)
+        return _exact_quotient(left, right) is not None and zeros > 0 and right // 10**zeros >= 2
+
+    def steps_for(self, left: int, right: int) -> Sequence[Step]:
+        zeros = _common_zeros(left, right)
+        scale = 10**zeros
+        dividend, divisor = left // scale, right // scale
+        plural = "s" if zeros > 1 else ""
+        return [
+            Step(
+                f"Cross out {zeros} zero{plural} from both",
+                f"{left} ÷ {right} → {dividend} ÷ {divisor}",
+                Fraction(dividend, divisor),
+            ),
+            calc("Now divide", dividend, DIV, divisor),
+        ]
+
+    def example_operands(self, rng: Random) -> tuple[int, int]:
+        divisor, quotient = rng.randint(2, 9), rng.randint(2, 9)
+        divisor_zeros = rng.randint(1, 2)
+        return divisor * quotient * 10 ** (
+            divisor_zeros + rng.randint(0, 2)
+        ), divisor * 10**divisor_zeros
+
+
+def _common_zeros(left: int, right: int) -> int:
+    zeros = 0
+    while left and right and left % 10 == 0 and right % 10 == 0:
+        left, right, zeros = left // 10, right // 10, zeros + 1
+    return zeros
+
+
 def _recall(divisor: int, quotient: int) -> Step:
     product = divisor * quotient
     return Step(

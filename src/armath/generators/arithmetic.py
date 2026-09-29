@@ -1,10 +1,10 @@
 """General-purpose generators that can be combined into presets."""
 
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from random import Random
 
-from armath.domain import Operand, Operation, Problem
+from armath.domain import Operand, Operation, Problem, Unknown
 from armath.generators.base import ProblemGenerator
 from armath.generators.ranges import IntRange
 
@@ -60,6 +60,43 @@ class MixedGenerator:
 
     def generate(self, rng: Random) -> Problem:
         return rng.choice(self._generators).generate(rng)
+
+
+class WeightedGenerator:
+    """Picks a generator for each problem with the given relative weights."""
+
+    def __init__(self, weighted: Sequence[tuple[float, ProblemGenerator]]) -> None:
+        if not weighted or any(weight <= 0 for weight, _ in weighted):
+            raise ValueError("needs at least one generator, all with positive weights")
+        self._weights = [weight for weight, _ in weighted]
+        self._generators = [generator for _, generator in weighted]
+
+    def generate(self, rng: Random) -> Problem:
+        (generator,) = rng.choices(self._generators, weights=self._weights)
+        return generator.generate(rng)
+
+
+class MissingOperandGenerator:
+    """Hides an operand instead of the result in a share of another generator's problems.
+
+    ``12 × 7 = ?`` becomes ``12 × ? = 84`` or ``? × 7 = 84``.
+    """
+
+    def __init__(self, base: ProblemGenerator, share: float) -> None:
+        if not 0 <= share <= 1:
+            raise ValueError("share must be between 0 and 1")
+        self._base = base
+        self._share = share
+
+    def generate(self, rng: Random) -> Problem:
+        problem = self._base.generate(rng)
+        if rng.random() >= self._share:
+            return problem
+        unknown = rng.choice((Unknown.LEFT, Unknown.RIGHT))
+        try:
+            return replace(problem, unknown=unknown)
+        except ValueError:  # e.g. 0 × ? = 0 has no unique answer
+            return problem
 
 
 class FilteredGenerator:

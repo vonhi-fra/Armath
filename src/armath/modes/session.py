@@ -5,9 +5,10 @@ from datetime import timedelta
 from fractions import Fraction
 from random import Random
 
-from armath.domain import Attempt, Problem, SessionKind, SessionRecord, parse_answer
+from armath.domain import Attempt, Operand, Problem, SessionKind, SessionRecord, parse_answer
 from armath.generators import ProblemGenerator
 from armath.modes.answering import AnswerPolicy
+from armath.modes.choices import ChoiceMaker
 from armath.modes.clock import Clock
 from armath.modes.scoring import ScoringPolicy
 
@@ -23,6 +24,8 @@ class SessionPlan:
     question_limit: int | None = None
     name: str = "Custom"
     kind: SessionKind = SessionKind.PRACTICE
+    choices: ChoiceMaker | None = None
+    """Multiple-choice options for each problem; ``None`` means the answer is typed."""
 
     def __post_init__(self) -> None:
         if self.time_limit is None and self.question_limit is None:
@@ -68,8 +71,8 @@ class Session:
         self._started_at = clock.now()
         self._started_mono = clock.monotonic()
         self._tracker = _ProblemTracker(self._started_mono)
-        self._current = plan.generator.generate(rng)
         self._attempts: list[Attempt] = []
+        self._current, self._choices = self._next_problem()
 
     @property
     def plan(self) -> SessionPlan:
@@ -78,6 +81,19 @@ class Session:
     @property
     def current(self) -> Problem:
         return self._current
+
+    @property
+    def choices(self) -> tuple[Operand, ...] | None:
+        """The current problem's options in a multiple-choice session."""
+        return self._choices
+
+    def choose(self, index: int) -> Attempt | None:
+        """Pick one of the current options (0-based)."""
+        if self._choices is None:
+            raise ValueError("this session is not multiple choice")
+        if not 0 <= index < len(self._choices):
+            raise IndexError(f"there is no option {index + 1}")
+        return self.answer_value(self._choices[index].value)
 
     @property
     def attempts(self) -> tuple[Attempt, ...]:
@@ -143,9 +159,14 @@ class Session:
             corrections=tracker.corrections,
         )
         self._attempts.append(attempt)
-        self._current = self._plan.generator.generate(self._rng)
+        self._current, self._choices = self._next_problem()
         self._tracker = _ProblemTracker(moment)
         return attempt
+
+    def _next_problem(self) -> tuple[Problem, tuple[Operand, ...] | None]:
+        problem = self._plan.generator.generate(self._rng)
+        maker = self._plan.choices
+        return problem, None if maker is None else maker.choices(problem, self._rng)
 
     def _ensure_running(self) -> None:
         if self.is_over:

@@ -7,7 +7,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from armath.domain import Operand, Operation, Problem
-from armath.generators import ZetamacSettings, zetamac_generator
+from armath.generators import ZetamacSettings, optiver_generator, zetamac_generator
 from armath.tricks import Trick, default_registry
 
 REGISTRY = default_registry()
@@ -61,14 +61,25 @@ def test_every_zetamac_problem_has_an_explanation(seed: int) -> None:
     assert explanation.result == problem.answer.value
 
 
-@pytest.mark.parametrize("operation", Operation)
-def test_each_operation_has_exactly_one_fallback(operation: Operation) -> None:
-    fallbacks = [trick for trick in REGISTRY.for_operation(operation) if trick.fallback]
+@settings(max_examples=500)
+@given(seed=st.integers())
+def test_every_optiver_problem_is_explained_by_every_applicable_trick(seed: int) -> None:
+    problem = optiver_generator().generate(Random(seed))
 
-    assert len(fallbacks) == 1
-    assert fallbacks[0].priority < min(
-        trick.priority for trick in REGISTRY.for_operation(operation) if not trick.fallback
-    )
+    tricks = REGISTRY.applicable(problem)
+
+    assert tricks, f"no trick covers {problem.prompt}"
+    for trick in tricks:
+        assert trick.explain(problem).result == problem.answer.value
+
+
+@pytest.mark.parametrize("operation", Operation)
+def test_each_operation_has_a_general_method_per_kind_of_problem(operation: Operation) -> None:
+    fallbacks = {t.id.split("-")[0] for t in REGISTRY.for_operation(operation) if t.fallback}
+
+    # whole numbers, decimals, fractions, missing operand
+    assert len(fallbacks) == 4
+    assert {"dec", "frac", "missing"} <= fallbacks
 
 
 def test_every_trick_has_descriptive_metadata() -> None:

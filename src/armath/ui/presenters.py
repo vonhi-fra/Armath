@@ -12,7 +12,7 @@ from armath.analytics import (
     summarize,
     trick_insights,
 )
-from armath.domain import Problem, SessionRecord
+from armath.domain import Attempt, Problem, SessionRecord
 from armath.learning import Drill, TrickLesson, library, review
 from armath.modes import Clock, Session, SessionPlan
 from armath.persistence import HistoryRepository, SettingsRepository
@@ -108,13 +108,24 @@ class GamePresenter:
         self._show_problem(self._session)
 
     def answer(self, text: str) -> None:
+        """Typed input (called on every change)."""
+        self._submit(lambda session: session.answer(text))
+
+    def choose(self, index: int) -> None:
+        """A multiple-choice option (0-based); ignored if there is no such option."""
+        session = self._session
+        if session is None or session.choices is None or not 0 <= index < len(session.choices):
+            return
+        self._submit(lambda session: session.choose(index))
+
+    def _submit(self, respond: Callable[[Session], Attempt | None]) -> None:
         session = self._session
         if session is None:
             return
         if session.is_over:
             self._finish(session)
             return
-        if session.answer(text) is None:
+        if respond(session) is None:
             return
         self._view.show_score(session.score)
         if session.is_over:
@@ -142,6 +153,8 @@ class GamePresenter:
     def _show_problem(self, session: Session) -> None:
         self._view.clear_answer()
         self._view.show_problem(session.current.prompt)
+        choices = session.choices
+        self._view.show_choices(None if choices is None else [str(option) for option in choices])
         self._view.show_steps(None)
         answered = len(session.attempts)
         self._view.show_hint(None if self._coach is None else self._coach.hint(answered))
@@ -150,11 +163,14 @@ class GamePresenter:
     def _show_status(self, session: Session) -> None:
         remaining = session.remaining_time
         limit = session.plan.question_limit
+        progress = None
+        if limit is not None:
+            progress = f"{min(len(session.attempts) + 1, limit)} / {limit}"
         if remaining is not None:
-            self._view.show_status("Time", format_clock(remaining))
-        elif limit is not None:
-            current = min(len(session.attempts) + 1, limit)
-            self._view.show_status("Problem", f"{current} / {limit}")
+            clock = format_clock(remaining)
+            self._view.show_status("Time", clock if progress is None else f"{clock} · {progress}")
+        elif progress is not None:
+            self._view.show_status("Problem", progress)
 
     def _finish(self, session: Session) -> None:
         self._session = None

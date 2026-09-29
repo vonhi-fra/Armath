@@ -26,9 +26,9 @@ def test_review_lists_slowest_problems_first_with_their_best_trick() -> None:
 
 
 def test_problems_without_a_trick_have_no_lesson() -> None:
-    decimal = Problem.create(Operand.decimal("1.5"), Operation.ADD, Operand.integer(2))
+    negative = Problem.create(Operand.integer(-3), Operation.ADD, Operand.integer(2))
 
-    assert lesson_for(decimal, REGISTRY) is None
+    assert lesson_for(negative, REGISTRY) is None
 
 
 def test_library_has_a_stable_worked_example_for_every_trick() -> None:
@@ -37,4 +37,4 @@ def test_library_has_a_stable_worked_example_for_every_trick() -> None:
     assert [entry.trick_id for entry in first] == [trick.id for trick in REGISTRY.all()]
     assert first == second
     assert all(entry.example.steps for entry in first)
-    assert sum(entry.is_general for entry in first) == 4
+    assert sum(entry.is_general for entry in first) == sum(t.fallback for t in REGISTRY.all())

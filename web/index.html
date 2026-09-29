@@ -100,6 +100,15 @@
         <ul id="form-errors" class="errors" role="alert" hidden></ul>
       </form>
 
+      <section class="card optiver-card" aria-labelledby="optiver-title">
+        <div>
+          <h2 id="optiver-title">Optiver 80 in 8</h2>
+          <p class="muted">80 multiple-choice questions in 8 minutes: whole numbers, decimals, fractions and
+            missing numbers. +1 for a right answer, −1 for a wrong one. Pick with the keys 1–4.</p>
+        </div>
+        <button id="start-optiver" class="button primary" type="button">Start test</button>
+      </section>
+
       <section id="recommendations" class="card" aria-labelledby="recommendations-title" hidden>
         <h2 id="recommendations-title">Recommended practice</h2>
         <p class="muted">Where your recent sessions lost the most time, and the trick that fixes it.</p>
@@ -127,6 +136,7 @@
         <div id="problem" class="problem" aria-live="polite"></div>
         <input id="answer" class="answer" type="text" inputmode="decimal" autocomplete="off"
                autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Your answer">
+        <div id="choices" class="choices" role="group" aria-label="Options" hidden></div>
         <p id="hint" class="hint-line" hidden></p>
         <div id="steps" class="card steps-panel" aria-live="polite" hidden></div>
       </div>

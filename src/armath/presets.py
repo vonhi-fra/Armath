@@ -2,10 +2,33 @@
 
 from datetime import timedelta
 
-from armath.generators import ZetamacSettings, zetamac_generator
-from armath.modes import CorrectCount, SessionPlan, UntilCorrect
+from armath.generators import ZetamacSettings, optiver_generator, zetamac_generator
+from armath.modes import (
+    CorrectCount,
+    CorrectMinusWrong,
+    FirstResponse,
+    PlausibleChoices,
+    SessionPlan,
+    UntilCorrect,
+)
 
 ZETAMAC_DURATION = timedelta(seconds=120)
+OPTIVER_QUESTIONS = 80
+OPTIVER_DURATION = timedelta(minutes=8)
+OPTIVER_NAME = "Optiver 80 in 8"
+
+
+def optiver() -> SessionPlan:
+    """Optiver's 80-in-8: 80 multiple-choice questions, 8 minutes, +1 right / −1 wrong."""
+    return SessionPlan(
+        generator=optiver_generator(),
+        scoring=CorrectMinusWrong(),
+        answering=FirstResponse(),
+        time_limit=OPTIVER_DURATION,
+        question_limit=OPTIVER_QUESTIONS,
+        name=OPTIVER_NAME,
+        choices=PlausibleChoices(),
+    )
 
 
 def zetamac(

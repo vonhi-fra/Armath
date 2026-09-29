@@ -591,6 +591,59 @@ body.loading .nav {
   background: var(--accent-soft);
 }
 
+/* ---------- Multiple choice ---------- */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: min(480px, 100%);
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  font-family: var(--problem-font);
+  font-size: 1.4rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.1s ease, background-color 0.1s ease;
+}
+
+.choice:hover,
+.choice:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.choice kbd {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.optiver-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.optiver-card h2 {
+  margin-bottom: 4px;
+}
+
+.optiver-card p {
+  margin: 0;
+}
+
+.review-item.wrong > summary .meta {
+  color: var(--bad);
+}
+
 /* ---------- Coaching during a drill ---------- */
 .hint-line {
   max-width: 520px;
@@ -1001,6 +1054,15 @@ body.failed #loading-status {
 
   .nav {
     margin-left: 0;
+  }
+
+  .optiver-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .choice kbd {
+    display: inline-block;
   }
 
   .brand-name {

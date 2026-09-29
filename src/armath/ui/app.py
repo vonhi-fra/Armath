@@ -1,10 +1,12 @@
 """The application: wires the screens together and routes user actions."""
 
+from collections.abc import Callable
 from random import Random
 
+from armath import presets
 from armath.domain import SessionRecord
 from armath.learning import Drill
-from armath.modes import Clock
+from armath.modes import Clock, SessionPlan
 from armath.persistence import HistoryRepository, SettingsRepository
 from armath.tricks import TrickRegistry
 from armath.ui.presenters import (
@@ -54,6 +56,7 @@ class App:
         self._library = LibraryPresenter(library_view, registry)
         self._progress = ProgressPresenter(progress_view, history, registry)
         self._drill: Drill | None = None
+        self._again: Callable[[], None] = self._start_practice
 
     def open_home(self) -> None:
         self._game.quit()
@@ -72,11 +75,12 @@ class App:
         self._navigator.go_to(Screen.PROGRESS)
 
     def start(self, form: SettingsForm) -> None:
-        settings = self._home.submit(form)
-        if settings is not None:
-            self._drill = None
-            self._game.start(settings.plan())
-            self._navigator.go_to(Screen.GAME)
+        """Zetamac-style practice with the settings from the home screen."""
+        if self._home.submit(form) is not None:
+            self._start_practice()
+
+    def start_optiver(self) -> None:
+        self._begin(presets.optiver(), again=self.start_optiver)
 
     def start_drill(self, trick_id: str) -> None:
         """Practise one trick; unknown ids are ignored."""
@@ -84,20 +88,29 @@ class App:
             trick = self._registry.get(trick_id)
         except KeyError:
             return
-        self._drill = Drill(trick, self._registry)
-        self._game.start(self._drill.plan(), coach=self._drill)
-        self._navigator.go_to(Screen.GAME)
+        drill = Drill(trick, self._registry)
+        self._begin(drill.plan(), again=lambda: self.start_drill(trick_id), drill=drill)
 
     def play_again(self) -> None:
-        """Repeat the last kind of session: the same drill, or practice with saved settings."""
-        if self._drill is not None:
-            self.start_drill(self._drill.trick.id)
-            return
-        self._game.start(self._settings.load().plan())
-        self._navigator.go_to(Screen.GAME)
+        """Repeat the last kind of session (practice with saved settings by default)."""
+        self._again()
 
     def answer(self, text: str) -> None:
         self._game.answer(text)
+
+    def choose(self, index: int) -> None:
+        self._game.choose(index)
+
+    def _start_practice(self) -> None:
+        self._begin(self._settings.load().plan(), again=self._start_practice)
+
+    def _begin(
+        self, plan: SessionPlan, *, again: Callable[[], None], drill: Drill | None = None
+    ) -> None:
+        self._drill = drill
+        self._again = again
+        self._game.start(plan, coach=drill)
+        self._navigator.go_to(Screen.GAME)
 
     def reveal_steps(self) -> None:
         self._game.reveal()

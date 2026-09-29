@@ -70,6 +70,10 @@ class GameView(Protocol):
 
     def enable_reveal(self, enabled: bool) -> None: ...
 
+    def show_choices(self, labels: Sequence[str] | None) -> None:
+        """Multiple-choice options instead of the answer box (``None``: typed answers)."""
+        ...
+
 
 class ResultsView(Protocol):
     def show_summary(self, summary: SessionSummary) -> None: ...

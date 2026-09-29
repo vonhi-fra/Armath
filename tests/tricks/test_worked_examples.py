@@ -2,7 +2,7 @@
 
 import pytest
 
-from armath.domain import Operand, Operation, Problem
+from armath.domain import Operand, Operation, Problem, Unknown
 from armath.tricks import default_registry
 
 REGISTRY = default_registry()
@@ -17,6 +17,88 @@ SYMBOLS = {
 def _problem(text: str) -> Problem:
     left, symbol, right = text.split()
     return Problem.create(Operand.integer(int(left)), SYMBOLS[symbol], Operand.integer(int(right)))
+
+
+DEC, INT, FRAC = Operand.decimal, Operand.integer, Operand.fraction
+MUL, DIV, ADD = Operation.MULTIPLY, Operation.DIVIDE, Operation.ADD
+
+
+@pytest.mark.parametrize(
+    ("problem", "best", "work"),
+    [
+        (
+            Problem.create(INT(8), DIV, DEC("0.4")),
+            "dec-divide",
+            ["8 ÷ 0.4 → 80 ÷ 4", "80 ÷ 4 = 20"],
+        ),
+        (
+            Problem.create(DEC("0.3"), MUL, DEC("0.07")),
+            "dec-multiply",
+            ["0.3 × 0.07 → 3 × 7", "3 × 7 = 21", "21 ÷ 1000 = 0.021"],
+        ),
+        (
+            Problem.create(DEC("12.5"), ADD, DEC("3.75")),
+            "dec-add",
+            ["12.5 + 3.75 → 1250 + 375", "1250 + 375 = 1625", "1625 ÷ 100 = 16.25"],
+        ),
+        (
+            Problem.create(INT(39), DIV, INT(2)),
+            "dec-divide",
+            ["39 ÷ 2 = 19 remainder 1", "1 ÷ 2 = 0.5", "19 + 0.5 = 19.5"],
+        ),
+        (
+            Problem.create(DEC("0.25"), MUL, INT(4000)),
+            "dec-friendly-times",
+            ["0.25 = 1/4", "4000 ÷ 4 = 1000"],
+        ),
+        (
+            Problem.create(INT(8), DIV, DEC("0.25")),
+            "dec-friendly-divide",
+            ["0.25 = 1/4", "8 × 4 = 32"],
+        ),
+        (
+            Problem.create(FRAC(3, 8), ADD, FRAC(1, 4)),
+            "frac-add",
+            ["3/8 + 1/4 = 3/8 + 2/8", "3 + 2 = 5, so 5/8"],
+        ),
+        (
+            Problem.create(FRAC(3, 4), MUL, INT(12)),
+            "frac-multiply",
+            ["3 × 12 / 4 × 1 = 36/4", "36/4 = 9"],
+        ),
+        (
+            Problem.create(FRAC(3, 4), DIV, FRAC(1, 8)),
+            "frac-divide",
+            ["3/4 ÷ 1/8 = 3/4 × 8/1", "3 × 8 / 4 × 1 = 24/4", "24/4 = 6"],
+        ),
+        (
+            Problem.create(INT(66), MUL, DEC("2.1"), unknown=Unknown.RIGHT),
+            "missing-multiply",
+            ["66 × ? = 138.6 → 138.6 ÷ 66", "138.6 ÷ 66 → 1386 ÷ 660", "1386 ÷ 660 = 2.1"],
+        ),
+        (
+            _problem("63000 / 700"),
+            "div-cancel-zeros",
+            ["63000 ÷ 700 → 630 ÷ 7", "630 ÷ 7 = 90"],
+        ),
+        (
+            _problem("47 x 53"),
+            "mul-difference-of-squares",
+            ["47 × 53 = (50 − 3) × (50 + 3)", "50 × 50 = 2500", "3 × 3 = 9", "2500 − 9 = 2491"],
+        ),
+        (_problem("65 x 65"), "mul-square-5", ["6 × 7 = 42", "42 | 25 → 4225"]),
+    ],
+)
+def test_optiver_worked_example(problem: Problem, best: str, work: list[str]) -> None:
+    trick = REGISTRY.best(problem)
+
+    assert trick is not None
+    assert trick.id == best
+    assert [step.work for step in trick.explain(problem).steps] == work
+
+
+def test_round_up_addition_stays_below_a_thousand() -> None:
+    assert not REGISTRY.get("add-round-up").applies_to(_problem("2327 + 516"))
 
 
 @pytest.mark.parametrize(

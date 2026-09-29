@@ -257,6 +257,19 @@ class DomGameView:
     def enable_reveal(self, enabled: bool) -> None:
         _element("reveal").hidden = not enabled
 
+    def show_choices(self, labels: Sequence[str] | None) -> None:
+        box = _element("choices")
+        box.replaceChildren()
+        for index, label in enumerate(labels or []):
+            button = _create("button", class_name="choice")
+            button.type = "button"
+            button.dataset.choice = str(index)
+            button.appendChild(_create("kbd", str(index + 1)))
+            button.appendChild(_create("span", label))
+            box.appendChild(button)
+        box.hidden = labels is None
+        _element("answer").hidden = labels is not None
+
 
 class DomResultsView:
     def show_summary(self, summary: SessionSummary) -> None:
@@ -275,6 +288,9 @@ class DomResultsView:
             summary = _create("summary")
             summary.appendChild(_create("span", item.equation, "equation"))
             meta = _seconds(item.seconds)
+            if item.wrong_answer is not None:
+                meta += f" · you chose {item.wrong_answer}"
+                details.classList.add("wrong")
             if item.corrections:
                 meta += f" · {item.corrections} correction{'s' if item.corrections > 1 else ''}"
             summary.appendChild(_create("span", meta, "meta"))
@@ -555,6 +571,13 @@ def main() -> None:
         if event.key == "Escape" and navigator.current is not Screen.HOME:
             event.preventDefault()
             app.open_home()
+        elif (
+            navigator.current is Screen.GAME
+            and not _element("choices").hidden
+            and event.key in ("1", "2", "3", "4")
+        ):
+            event.preventDefault()
+            app.choose(int(event.key) - 1)
 
     def on_answer_key(event: Any) -> None:
         if event.key == "?":
@@ -562,9 +585,12 @@ def main() -> None:
             app.reveal_steps()
 
     def on_click(event: Any) -> None:
-        button = event.target.closest("[data-trick]")
-        if button is not None:
-            app.start_drill(str(button.dataset.trick))
+        trick = event.target.closest("[data-trick]")
+        if trick is not None:
+            app.start_drill(str(trick.dataset.trick))
+        choice = event.target.closest("[data-choice]")
+        if choice is not None:
+            app.choose(int(choice.dataset.choice))
 
     def on_reveal(_: Any) -> None:
         app.reveal_steps()
@@ -580,6 +606,7 @@ def main() -> None:
     _listen(_element("nav-home"), "click", lambda _: app.open_home())
     _listen(_element("nav-library"), "click", lambda _: app.open_library())
     _listen(_element("nav-progress"), "click", lambda _: app.open_progress())
+    _listen(_element("start-optiver"), "click", lambda _: app.start_optiver())
     _listen(
         _element("progress-mode"), "change", lambda event: app.open_progress(event.target.value)
     )

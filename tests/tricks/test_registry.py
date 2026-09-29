@@ -33,18 +33,38 @@ def test_applicable_is_sorted_best_first() -> None:
 @pytest.mark.parametrize(
     "problem",
     [
-        Problem.create(Operand.decimal("1.5"), Operation.ADD, Operand.integer(2)),
         Problem.create(Operand.integer(-3), Operation.ADD, Operand.integer(2)),
-        Problem.create(
-            Operand.integer(12), Operation.MULTIPLY, Operand.integer(7), unknown=Unknown.LEFT
-        ),
-        Problem.create(Operand.integer(7), Operation.DIVIDE, Operand.integer(2)),
+        Problem.create(Operand.integer(-8), Operation.DIVIDE, Operand.integer(2)),
     ],
-    ids=["decimal", "negative", "missing-operand", "inexact-division"],
+    ids=["negative-sum", "negative-division"],
 )
-def test_problems_outside_whole_number_tricks_get_no_explanation(problem: Problem) -> None:
+def test_problems_no_trick_covers_get_no_explanation(problem: Problem) -> None:
     assert REGISTRY.best(problem) is None
     assert REGISTRY.explain(problem) is None
+
+
+@pytest.mark.parametrize(
+    ("problem", "trick_id"),
+    [
+        (Problem.create(Operand.decimal("1.5"), Operation.ADD, Operand.integer(2)), "dec-add"),
+        (
+            Problem.create(
+                Operand.integer(12), Operation.MULTIPLY, Operand.integer(7), unknown=Unknown.LEFT
+            ),
+            "missing-multiply",
+        ),
+        (
+            Problem.create(Operand.fraction(3, 8), Operation.ADD, Operand.fraction(1, 4)),
+            "frac-add",
+        ),
+        (Problem.create(Operand.integer(39), Operation.DIVIDE, Operand.integer(2)), "dec-divide"),
+    ],
+)
+def test_optiver_style_problems_have_general_methods(problem: Problem, trick_id: str) -> None:
+    best = REGISTRY.best(problem)
+
+    assert best is not None
+    assert best.id == trick_id
 
 
 def test_explaining_a_problem_the_trick_does_not_fit_raises() -> None:

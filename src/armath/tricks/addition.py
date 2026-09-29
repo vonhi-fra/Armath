@@ -62,7 +62,12 @@ class RoundUpAddition(WholeNumberTrick):
 
 
 def _round_candidates(left: int, right: int) -> list[tuple[int, int]]:
-    """(addend worth rounding up, the other addend) pairs."""
+    """(addend worth rounding up, the other addend) pairs.
+
+    Only for sums below 1000: with bigger numbers, left to right is simpler.
+    """
+    if max(left, right) >= 1000:
+        return []
     return [(n, other) for n, other in ((left, right), (right, left)) if near_next_ten(n)]
 
 

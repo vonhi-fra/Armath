@@ -6,7 +6,7 @@ import pytest
 from armath import presets
 from armath.cli import explain, list_tricks, main, run_session
 from armath.modes import ManualClock, Session
-from armath.tricks import default_registry
+from armath.tricks import TrickRegistry, default_registry
 
 START = datetime(2026, 9, 29, 12, 0, tzinfo=UTC)
 
@@ -59,7 +59,7 @@ def test_explain_reports_bad_input() -> None:
 def test_explain_reports_problems_without_tricks() -> None:
     output: list[str] = []
 
-    assert explain("1.5 + 2", default_registry(), output.append) == 1
+    assert explain("7 / 2", TrickRegistry([]), output.append) == 1
     assert output[-1].endswith("No trick covers this problem yet.")
 
 

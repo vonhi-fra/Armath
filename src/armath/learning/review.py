@@ -3,7 +3,8 @@
 from dataclasses import dataclass
 from random import Random
 
-from armath.domain import Operation, Problem, SessionRecord
+from armath.domain import Attempt, Operand, Operation, Problem, SessionRecord
+from armath.domain.numbers import can_write, infer_style
 from armath.tricks import Explanation, Trick, TrickRegistry
 
 
@@ -42,20 +43,34 @@ class ReviewItem:
     seconds: float
     corrections: int
     lesson: TrickLesson | None
+    wrong_answer: str | None = None
+    """What the user answered, if it was wrong (multiple-choice sessions)."""
 
 
 def review(record: SessionRecord, registry: TrickRegistry, count: int = 5) -> list[ReviewItem]:
-    """The ``count`` slowest problems, each with the best trick for it."""
-    slowest = sorted(record.attempts, key=lambda attempt: attempt.elapsed_seconds, reverse=True)
+    """Wrong answers first (they cost points), then the slowest; each with its best trick."""
+    ordered = sorted(
+        record.attempts, key=lambda attempt: (attempt.is_correct, -attempt.elapsed_seconds)
+    )
     return [
         ReviewItem(
             equation=attempt.problem.equation,
             seconds=attempt.elapsed_seconds,
             corrections=attempt.corrections,
             lesson=lesson_for(attempt.problem, registry),
+            wrong_answer=None if attempt.is_correct else _as_answer(attempt),
         )
-        for attempt in slowest[:count]
+        for attempt in ordered[:count]
     ]
+
+
+def _as_answer(attempt: Attempt) -> str:
+    """The response written like the answer would be (e.g. ``0.5`` rather than ``1/2``)."""
+    style = attempt.problem.answer.style
+    value = attempt.response
+    return str(
+        Operand(value, style) if can_write(value, style) else Operand(value, infer_style(value))
+    )
 
 
 def lesson_for(problem: Problem, registry: TrickRegistry) -> TrickLesson | None:

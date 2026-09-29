@@ -327,3 +327,70 @@ class DoubleRepeatedly(WholeNumberTrick):
             if other is not None and other > TIMES_TABLE_LIMIT:
                 return other, factor
         return None
+
+
+class DifferenceOfSquares(WholeNumberTrick):
+    id = "mul-difference-of-squares"
+    name = "Difference of squares"
+    summary = "Numbers equally far from a round number: (m − d)(m + d) = m² − d²."
+    operation = MUL
+    priority = 75
+
+    def fits(self, left: int, right: int) -> bool:
+        return self._centre(left, right) is not None
+
+    def steps_for(self, left: int, right: int) -> Sequence[Step]:
+        centre = self._centre(left, right)
+        if centre is None:
+            raise ValueError("the factors are not equally far from a round number")
+        middle, distance = centre
+        square = calc(f"{middle} squared", middle, MUL, middle)
+        small_square = calc(f"{distance} squared", distance, MUL, distance)
+        return [
+            Step(
+                f"Both are {distance} away from {middle}",
+                f"{left} × {right} = ({middle} − {distance}) × ({middle} + {distance})",
+                Fraction((middle - distance) * (middle + distance)),
+            ),
+            square,
+            small_square,
+            calc("Subtract", square.value, SUB, small_square.value),
+        ]
+
+    def example_operands(self, rng: Random) -> tuple[int, int]:
+        middle, distance = rng.randint(2, 9) * 10, rng.randint(1, 9)
+        return middle - distance, middle + distance
+
+    @staticmethod
+    def _centre(left: int, right: int) -> tuple[int, int] | None:
+        """(round middle, distance) when the factors sit symmetrically around a multiple of 10."""
+        if left == right or (left + right) % 2:
+            return None
+        middle, distance = (left + right) // 2, abs(left - right) // 2
+        if middle % 10 or middle < 20 or distance > 9:
+            return None
+        return middle, distance
+
+
+class SquareEndingInFive(WholeNumberTrick):
+    id = "mul-square-5"
+    name = "Squares ending in 5"
+    summary = "For n5 × n5, multiply n by the next number and write 25 after it."
+    operation = MUL
+    priority = 90
+
+    def fits(self, left: int, right: int) -> bool:
+        return left == right and left % 10 == 5 and 15 <= left <= 95
+
+    def steps_for(self, left: int, right: int) -> Sequence[Step]:
+        tens = left // 10
+        product = calc(f"{tens} times the next number", tens, MUL, tens + 1)
+        result = int(product.value) * 100 + 25
+        return [
+            product,
+            Step("Write 25 after it", f"{int(product.value)} | 25 → {result}", Fraction(result)),
+        ]
+
+    def example_operands(self, rng: Random) -> tuple[int, int]:
+        value = rng.randint(1, 9) * 10 + 5
+        return value, value
