@@ -200,8 +200,11 @@ Backlog (not urgent):
 4. ~~**Trick engine:** base, registry, explanations, property tests; first tricks for Zetamac ranges
    (A1–A2, S1–S3, M1–M9, D1–D5).~~ Done, except that M9 became "×4 and ×8 by doubling" (the
    factoring idea is covered by halve-and-double) and D3 "halve both" requires a quotient above 12.
-5. **Learning mode:** explanations on the results screen, trick drills (blocked → interleaved),
-   trick library screen.
+5. ~~**Learning mode:** explanations on the results screen, trick drills (blocked → interleaved),
+   trick library screen.~~ Done: drills are 10 focused problems (rule shown as a hint) + 10 mixed
+   (half look-alikes: same-operation Zetamac problems the trick doesn't fit), `?` reveals the
+   steps, and the results show per-round times. Possible refinement: per-trick look-alikes that
+   share a surface feature (×11 vs ×12, ÷9 on multiples of 90) for sharper discrimination practice.
 6. **Analytics:** feature buckets, baselines, weakness scores, recommender, progress screen.
 7. **Optiver 80-in-8:** decimals/fractions, missing operand, MC with distractors, ±1 scoring, O-tricks.
 8. **Polish:** facts mode with spaced repetition, backlog items, GitHub Pages deploy.

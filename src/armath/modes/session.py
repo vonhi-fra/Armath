@@ -71,6 +71,10 @@ class Session:
         self._attempts: list[Attempt] = []
 
     @property
+    def plan(self) -> SessionPlan:
+        return self._plan
+
+    @property
     def current(self) -> Problem:
         return self._current
 

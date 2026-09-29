@@ -19,6 +19,10 @@
       <span class="brand-mark" aria-hidden="true">×÷</span>
       <span class="brand-name">Armath</span>
     </a>
+    <nav class="nav" aria-label="Main">
+      <button id="nav-home" class="nav-link" type="button">Practice</button>
+      <button id="nav-library" class="nav-link" type="button">Tricks</button>
+    </nav>
     <label class="theme-picker">
       <span class="visually-hidden">Theme</span>
       <select id="theme">
@@ -109,15 +113,20 @@
 
     <section id="screen-game" class="screen" hidden>
       <div class="hud">
-        <div class="hud-item"><span class="hud-label">Time</span><span id="timer" class="hud-value">0:00</span></div>
+        <div class="hud-item"><span id="status-label" class="hud-label">Time</span><span id="status-value" class="hud-value">0:00</span></div>
         <div class="hud-item"><span class="hud-label">Score</span><span id="score" class="hud-value">0</span></div>
       </div>
       <div class="stage">
         <div id="problem" class="problem" aria-live="polite"></div>
         <input id="answer" class="answer" type="text" inputmode="decimal" autocomplete="off"
                autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Your answer">
+        <p id="hint" class="hint-line" hidden></p>
+        <div id="steps" class="card steps-panel" aria-live="polite" hidden></div>
       </div>
-      <button id="quit" class="button ghost small" type="button">Quit <kbd>Esc</kbd></button>
+      <div class="game-actions">
+        <button id="reveal" class="button ghost small" type="button" hidden>Show steps <kbd>?</kbd></button>
+        <button id="quit" class="button ghost small" type="button">Quit <kbd>Esc</kbd></button>
+      </div>
     </section>
 
     <section id="screen-results" class="screen" hidden>
@@ -129,17 +138,33 @@
           <div><dt title="Right without deleting anything">First try</dt><dd id="result-first-try"></dd></div>
           <div><dt>Avg time</dt><dd id="result-mean"></dd></div>
         </dl>
-        <div id="slowest" hidden>
-          <h2>Slowest problems</h2>
-          <table class="slowest">
-            <tbody id="slowest-rows"></tbody>
-          </table>
+        <div id="drill-report" class="drill-report" hidden>
+          <h2>How the drill went</h2>
+          <dl class="stats">
+            <div><dt title="Average time in the first round, with the rule shown">Focused round</dt><dd id="drill-focused"></dd></div>
+            <div><dt title="Average time on problems for this trick in the mixed round">Mixed: trick</dt><dd id="drill-mixed"></dd></div>
+            <div><dt title="Average time on the other problems in the mixed round">Mixed: others</dt><dd id="drill-lookalike"></dd></div>
+          </dl>
         </div>
         <div class="actions">
           <button id="play-again" class="button primary" type="button">Play again <kbd>Enter</kbd></button>
           <button id="back-home" class="button ghost" type="button">Settings <kbd>Esc</kbd></button>
         </div>
       </div>
+      <section id="review" class="card" aria-labelledby="review-title" hidden>
+        <h2 id="review-title">Your slowest problems</h2>
+        <p class="muted">Open one to see a faster way to solve it, then practise that trick.</p>
+        <div id="review-list" class="review-list"></div>
+      </section>
+    </section>
+
+    <section id="screen-library" class="screen" hidden>
+      <div class="card">
+        <h1 id="library-title" tabindex="-1">Tricks</h1>
+        <p class="lede">Faster ways to do arithmetic in your head. Each drill starts with the trick on its own,
+          then mixes in similar problems so you learn when it applies.</p>
+      </div>
+      <div id="library-list"></div>
     </section>
   </main>
 </body>

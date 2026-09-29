@@ -1,6 +1,6 @@
 """General-purpose generators that can be combined into presets."""
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from random import Random
 
@@ -60,3 +60,21 @@ class MixedGenerator:
 
     def generate(self, rng: Random) -> Problem:
         return rng.choice(self._generators).generate(rng)
+
+
+class FilteredGenerator:
+    """Keeps drawing from another generator until a problem passes ``accept``."""
+
+    def __init__(
+        self, base: ProblemGenerator, accept: Callable[[Problem], bool], max_tries: int = 1000
+    ) -> None:
+        self._base = base
+        self._accept = accept
+        self._max_tries = max_tries
+
+    def generate(self, rng: Random) -> Problem:
+        for _ in range(self._max_tries):
+            problem = self._base.generate(rng)
+            if self._accept(problem):
+                return problem
+        raise RuntimeError(f"no acceptable problem in {self._max_tries} tries")

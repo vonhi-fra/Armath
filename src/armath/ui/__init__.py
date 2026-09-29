@@ -2,7 +2,15 @@
 
 from armath.ui.app import App
 from armath.ui.settings_form import FormError, RangeFields, SettingsForm
-from armath.ui.views import GameView, HistoryRow, HomeView, Navigator, ResultsView, Screen
+from armath.ui.views import (
+    GameView,
+    HistoryRow,
+    HomeView,
+    LibraryView,
+    Navigator,
+    ResultsView,
+    Screen,
+)
 
 __all__ = [
     "App",
@@ -10,6 +18,7 @@ __all__ = [
     "GameView",
     "HistoryRow",
     "HomeView",
+    "LibraryView",
     "Navigator",
     "RangeFields",
     "ResultsView",

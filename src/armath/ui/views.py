@@ -7,6 +7,7 @@ from enum import StrEnum
 from typing import Protocol
 
 from armath.analytics import SessionSummary
+from armath.learning import DrillReport, LibraryEntry, ReviewItem, TrickLesson
 from armath.ui.settings_form import SettingsForm
 
 
@@ -14,6 +15,7 @@ class Screen(StrEnum):
     HOME = "home"
     GAME = "game"
     RESULTS = "results"
+    LIBRARY = "library"
 
 
 @dataclass(frozen=True)
@@ -43,8 +45,26 @@ class GameView(Protocol):
 
     def show_score(self, score: int) -> None: ...
 
-    def show_time(self, text: str) -> None: ...
+    def show_status(self, label: str, value: str) -> None:
+        """The progress indicator, e.g. ("Time", "1:23") or ("Problem", "4 / 20")."""
+        ...
+
+    def show_hint(self, text: str | None) -> None: ...
+
+    def show_steps(self, lesson: TrickLesson | None) -> None:
+        """Reveal a worked solution for the current problem (``None`` hides it)."""
+        ...
+
+    def enable_reveal(self, enabled: bool) -> None: ...
 
 
 class ResultsView(Protocol):
     def show_summary(self, summary: SessionSummary) -> None: ...
+
+    def show_review(self, items: Sequence[ReviewItem]) -> None: ...
+
+    def show_drill_report(self, report: DrillReport | None) -> None: ...
+
+
+class LibraryView(Protocol):
+    def show_library(self, entries: Sequence[LibraryEntry]) -> None: ...

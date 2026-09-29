@@ -234,7 +234,9 @@ class TimesEleven(WholeNumberTrick):
         ]
 
     def example_operands(self, rng: Random) -> tuple[int, int]:
-        return 11, rng.randint(12, 99)
+        # Multiples of 10 (11 × 40) are too easy to be worth practising.
+        tens, units = rng.randint(1, 9), rng.randint(1, 9)
+        return 11, tens * 10 + units
 
 
 class TimesTwelve(WholeNumberTrick):
