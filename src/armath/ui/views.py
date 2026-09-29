@@ -21,7 +21,7 @@ class HistoryRow:
     started_at: datetime
     mode: str
     score: int
-    accuracy: float | None
+    first_try_rate: float | None
 
 
 class Navigator(Protocol):

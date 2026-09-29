@@ -13,7 +13,11 @@ def problem(left: int = 6, operation: Operation = Operation.MULTIPLY, right: int
 
 
 def attempt(
-    the_problem: Problem | None = None, *, correct: bool = True, seconds: float = 2.0
+    the_problem: Problem | None = None,
+    *,
+    correct: bool = True,
+    seconds: float = 2.0,
+    corrections: int = 0,
 ) -> Attempt:
     the_problem = the_problem or problem()
     answer = the_problem.answer.value
@@ -22,6 +26,8 @@ def attempt(
         response=answer if correct else answer + Fraction(1),
         elapsed_seconds=seconds,
         answered_at=START + timedelta(seconds=seconds),
+        first_input_seconds=seconds / 2,
+        corrections=corrections,
     )
 
 

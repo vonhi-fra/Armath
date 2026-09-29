@@ -144,7 +144,7 @@ class DomHomeView:
             _cell(tr, _format_date(row.started_at))
             _cell(tr, row.mode)
             _cell(tr, str(row.score), "num")
-            _cell(tr, _percent(row.accuracy), "num")
+            _cell(tr, _percent(row.first_try_rate), "num")
             body.appendChild(tr)
         _element("history-empty").hidden = bool(rows)
         _element("history-table").hidden = not rows
@@ -169,7 +169,7 @@ class DomResultsView:
         _element("result-mode").textContent = summary.mode
         _element("result-score").textContent = str(summary.score)
         _element("result-answered").textContent = str(summary.answered)
-        _element("result-accuracy").textContent = _percent(summary.accuracy)
+        _element("result-first-try").textContent = _percent(summary.first_try_rate)
         mean = summary.mean_seconds
         _element("result-mean").textContent = _MISSING if mean is None else f"{mean:.1f}s"
         body = _element("slowest-rows")

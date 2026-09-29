@@ -1,166 +1,225 @@
 # Armath — research notes
 
-Initial research for a customizable mental-arithmetic trainer for quant/trading interviews
+Research for a customizable mental-arithmetic trainer for quant/trading interviews
 (Zetamac, Optiver 80-in-8) with a learning mode that detects weak spots and teaches tricks.
+First written at project start; revised after the web version (step 3) with a code review,
+deeper trick research and a design for the trick system.
 
 ## 1. Target test formats
 
 ### Zetamac (arithmetic.zetamac.com)
-- Default: addition `(2–100) + (2–100)`, subtraction = addition reversed,
-  multiplication `(2–12) × (2–100)`, division = multiplication reversed, 120 seconds.
+- Default: addition `(2..100) + (2..100)`, subtraction = addition reversed,
+  multiplication `(2..12) × (2..100)`, division = multiplication reversed, 120 seconds.
 - Typed answers, auto-advance as soon as the typed answer is correct (no Enter).
-- Score = number of correct answers. ~50 is a baseline, 70+ is competitive for top firms.
-- Fully customizable ranges per operation and duration.
+- Score = number of correct answers. ~50 is a baseline, 70+ is competitive; with ~30 min/day for a month
+  people report going from 60–70 to 100+.
+- Implications for tricks: multiplication is always *1–2-digit × up to 3-digit* and division always has a
+  divisor 2..12 and an integer quotient 2..100. Subtraction minuends are at most 200.
 
 ### Optiver 80-in-8
 - 80 questions, 8 minutes (~6 s/question), no calculator.
 - Multiple choice, 4 options, no skipping, no going back.
-- Scoring +1 correct / −1 wrong (some older reports: −2). Net ~55 reported as pass line, 70+ competitive.
-- Integers, decimals and fractions, all four operations.
-- Two shapes: direct (`373 + 57 = ?`) and missing-operand (`66 × ? = 138.6`).
-- Advice from prep sites: tables up to 19×19, fraction↔decimal table (1/8 = 0.125, 3/8 = 0.375, 1/7 ≈ 0.143…),
-  drill missing-operand until automatic; careful beats reckless because of the penalty.
+- Scoring +1 correct / −1 wrong (older reports: −2). Net ~55 reported as pass line, 70+ competitive.
+- Integers, decimals and fractions, all four operations; direct (`373 + 57 = ?`) and missing-operand
+  (`66 × ? = 138.6`) shapes. Reported content: two-digit multiplication, decimals (`0.25 × 4000`),
+  large clean division (`63000 / 700`), 3–4 digit addition/subtraction, fractions that cancel neatly,
+  decimal divisors (`8 ÷ 0.4 = 20`).
+- Advice: tables to 19×19, fraction↔decimal table, drill missing-operand; careful beats reckless.
 
 ## 2. Existing tools (what "better" means)
 
 | Tool | What it has | What it lacks |
 | --- | --- | --- |
 | Zetamac | Custom ranges, fast keyboard flow | No history, no per-problem stats, no teaching |
-| zetamac-tracker (GitHub, static JS + localStorage) | Per-question timing, score history, calendar heatmap, slowest problem types | No explanations, no targeted drills |
-| Various 80-in-8 clones (quantvault, quantt, trademind, optiver80-in-8.com) | 80Q/8min, MC, penalty scoring | Generic; little adaptive practice |
+| zetamac-tracker (static JS) | Per-question timing, history, heatmap, slowest problem types | No explanations or targeted drills |
+| mentalmath.online, Quantercise, Mind Math Trainer | Adaptive weighting of weak operations / patterns, streaks, spaced repetition queues | Adapt *what* you practise, but don't teach *how* to solve it faster |
+| 80-in-8 clones | 80Q/8min, MC, penalty scoring | Generic, little adaptivity |
 
-**Our differentiators:** per-problem timing normalized by difficulty, weakness detection,
-a trick/strategy engine that explains *this specific problem* step by step, trick-focused drill mode,
-spaced repetition of slow/missed problems, progress charts, Zetamac + Optiver + custom presets, themes.
+**Our differentiator:** diagnose the slow/erroneous problems, explain *that specific problem* with the best
+trick step by step, then drill the trick — first in isolation, then mixed with look-alikes so you learn
+*when* to use it — and measure whether you actually got faster.
 
-## 3. Tech stack options
+## 3. Tech stack (decided: Python + Pyodide)
 
-Hard constraints: Python with **uv** + **pytest**, clean OOP/SOLID, and it should eventually run on
-**GitHub Pages** (static hosting only — no server).
+All logic is Python (uv, pytest, ruff, mypy strict); the browser loads Pyodide (v314, Python 3.14) from
+jsDelivr and our wheel; `armath.web.dom` is the only browser-specific module. Alternatives considered:
+TypeScript app (drops Python), Python server (no GitHub Pages), Flet (heavy), PyScript+MicroPython
+(missing stdlib). Cost: ~8 MB first load, cached afterwards.
 
-| Option | Pros | Cons |
-| --- | --- | --- |
-| **A. Python core in the browser via Pyodide** (chosen) | All logic in tested Python; static site → GitHub Pages; works offline | ~8 MB runtime download, ~2–3 s cold start (cached afterwards) |
-| B. TypeScript app (Vite + Vitest) | Fastest load, most natural for the web | Drops uv/pytest/Python |
-| C. Python server (FastAPI/HTMX, NiceGUI, Streamlit) | Nice Python DX | Needs a server; not GitHub Pages |
-| D. Flet (`flet build web`) | Python UI, static output | Heavy bundle, less control over look/themes |
-| E. PyScript + MicroPython | Tiny download | Missing stdlib (dataclasses, typing, fractions) → poor fit for clean OOP |
+## 4. Learning science that shapes the design
 
-Plain Pyodide (loaded from CDN) is ~1 s faster than PyScript on top of it, so we'd use Pyodide directly with a
-tiny JS bootstrap. Keystroke → Python call latency is negligible.
+- **Strategy vs. retrieval.** Arithmetic develops from slow procedures to fast memory retrieval
+  (Siegler). Small facts (7×8) should be *retrieved*; larger problems need a *procedure*. So the tool
+  needs two kinds of practice: fact drills (spaced repetition of individual facts) and trick/strategy
+  drills. Response times reveal which one is happening: retrieval is fast and flat, procedures grow with
+  problem size ("problem-size effect").
+- **Strategy choice.** People pick strategies by relative speed and accuracy (Adaptive Strategy Choice
+  Model). A trick only helps once it is faster than your current method → measure before/after per trick.
+- **Blocked → interleaved practice.** Blocked practice (all problems use one trick) is good for learning
+  the steps, but interleaved practice (mixed problems) trains *recognising which trick applies* and gives
+  much better test results (Rohrer et al. 2014, 2015, 2019 RCT). → A trick drill should end with a mixed
+  round including look-alikes where the trick does *not* apply (e.g. ×11 mixed with ×12).
+- **Worked examples with fading.** Novices learn procedures best from worked examples whose steps are
+  gradually removed until they solve alone. → Explanations are step lists; the drill can show all steps,
+  then only the first step as a hint, then nothing.
+- **Desirable difficulties & spacing.** Spacing and retrieval improve retention; tricks and weak facts
+  should come back in later sessions (Leitner boxes per trick/fact).
 
-### Proposed architecture (option A)
+## 5. Detecting "which problems went worse"
 
-Ports-and-adapters: the domain never imports browser code, so all of it runs under plain CPython + pytest.
+Raw time misleads (47×83 is inherently slower than 3×4), so compare against an expectation:
+1. Every attempt records the problem, total time, **time to first keystroke** (thinking vs. typing) and
+   **corrections** (deletions — the only visible mistakes in Zetamac mode, where only correct answers are
+   submitted). *Implemented after the review.*
+2. Features per problem: operation, digit counts, carries/borrows, decimal places, missing operand,
+   answer length, and which tricks apply.
+3. Expected time = your own recent median for the same feature bucket (with sensible priors while data is
+   scarce); slowness = time ÷ expected. Medians/MAD, exponential decay so recent sessions count more.
+   Exclude the first problem of a session (screen-switch reaction time).
+4. Weakness per bucket and per trick = mix of slowness and correction rate, with a minimum sample size.
+5. Recommender: rank tricks by (weakness on problems where the trick applies) × (how often such
+   problems occur in the target test).
+
+## 6. Trick catalogue v1
+
+Each entry: **when it applies** (this becomes `applies_to`) → method → example. All examples were checked.
+*Fallback* strategies apply to every problem of their operation, so every problem has an explanation.
+Tags: **Z** = common in Zetamac defaults, **O** = Optiver-style.
+
+### Addition
+| # | Trick | Applies when | Method → example |
+| --- | --- | --- | --- |
+| A1 | Left to right *(fallback)* Z | always | tens, then units, type while computing: 67 + 58 → 110 + 15 = 125 |
+| A2 | Round and compensate Z | an addend ends in 7, 8 or 9 | 47 + 38 = 47 + 40 − 2 = 85 |
+
+### Subtraction
+| # | Trick | Applies when | Method → example |
+| --- | --- | --- | --- |
+| S1 | Left to right *(fallback)* Z | always | 145 − 62 → 145 − 60 = 85, − 2 = 83 |
+| S2 | Round and compensate Z | subtrahend ends in 7, 8 or 9 | 131 − 69 = 131 − 70 + 1 = 62 |
+| S3 | Count up Z | the subtraction crosses a hundred (borrow) | 132 − 87: 87 → 100 is 13, + 32 = 45 |
+| S4 | Complement ("all from 9, last from 10") O | minuend is a power of 10 | 1000 − 387 = 613 |
+
+### Multiplication
+| # | Trick | Applies when | Method → example |
+| --- | --- | --- | --- |
+| M1 | Split and add, left to right *(fallback)* Z | always | 7 × 68 = 420 + 56 = 476 |
+| M2 | Round and compensate Z | multi-digit factor ends in 8 or 9 | 7 × 69 = 490 − 7 = 483 |
+| M3 | ×5 = ×10 ÷ 2 Z | a factor is 5 | 5 × 68 = 680 ÷ 2 = 340 |
+| M4 | ×25, ×50, ×125 via ÷4, ÷2, ÷8 O | a factor is 25, 50 or 125 | 36 × 25 = 3600 ÷ 4 = 900 |
+| M5 | ×9 = ×10 − n, ×99 = ×100 − n Z | a factor is 9 or 99 | 9 × 74 = 740 − 74 = 666 |
+| M6 | ×11: digit sum in the middle Z | a factor is 11, other is 2-digit | 67 × 11 = 6 (13) 7 → 737 |
+| M7 | ×12 = ×10 + ×2 Z | a factor is 12 | 12 × 47 = 470 + 94 = 564 |
+| M8 | Halve and double Z | one factor even, the other ends in 5 | 6 × 45 = 3 × 90 = 270 |
+| M9 | Factor the multiplier Z | a factor splits into easy parts | 12 × 35 = 6 × 70 = 420 |
+| M10 | Near-round multiplier O | a factor is 19, 21, 29, 31, 49, 51… | 19 × 23 = 460 − 23 = 437 |
+| M11 | Difference of squares O | factors equidistant from a round number | 47 × 53 = 2500 − 9 = 2491 |
+| M12 | Close together (Benjamin) O | both factors near the same round number | 43 × 48 = 40 × 51 + 3 × 8 = 2064 |
+| M13 | Same tens, units sum to 10 O | 43 × 47 style | 4 × 5 = 20, 3 × 7 = 21 → 2021 |
+| M14 | Base 100 (Vedic *Nikhilam*) O | both factors near 100 | 97 × 96 = (97 − 4) \| 3 × 4 = 9312 |
+| M15 | Teens × teens O | both factors 11..19 | 13 × 17 = (13 + 7) × 10 + 21 = 221 |
+| M16 | Squares ending in 5 O | square of n5 | 65² = 6 × 7 \| 25 = 4225 |
+| M17 | Squares by up-and-down (Benjamin) O | any square | 47² = 50 × 44 + 3² = 2209 |
+| M18 | Vertically and crosswise O | general 2-digit × 2-digit | 23 × 12: 2 \| 4 + 3 \| 6 → 276 |
+| M19 | Decimals as integers O | a factor has decimals | 0.3 × 0.07 = 21 × 10⁻³ = 0.021 |
+
+### Division
+| # | Trick | Applies when | Method → example |
+| --- | --- | --- | --- |
+| D1 | Missing factor, chunking *(fallback)* Z | always | 648 ÷ 12: 12 × 50 = 600, 48 = 12 × 4 → 54 |
+| D2 | ÷5 = ×2 ÷ 10 Z | divisor 5 | 345 ÷ 5 = 690 ÷ 10 = 69 |
+| D3 | Halve both Z | both even | 432 ÷ 12 = 216 ÷ 6 = 36 |
+| D4 | ÷11 from the outer digits Z | divisor 11, 2-digit quotient | 858 ÷ 11: 8 > 5 so 8 − 1 = 7, then 8 → 78 |
+| D5 | ÷9 digit rule Z | divisor 9, quotient not ending in 0 | 423 ÷ 9: 42 ÷ 9 → 4, 10 − 3 = 7 → 47 |
+| D6 | Double both (divisor ends in 5) O | divisor 15, 25, 35… | 315 ÷ 35 = 630 ÷ 70 = 9 |
+| D7 | ÷25, ÷125 via ×4, ×8 O | divisor 25 or 125 | 900 ÷ 25 = 36 |
+| D8 | Shift the decimal point O | decimal divisor | 8 ÷ 0.4 = 80 ÷ 4 = 20 |
+| D9 | Cancel zeros O | both end in zeros | 63000 ÷ 700 = 630 ÷ 7 = 90 |
+
+Why D4 works: 11 × (10a + b) is `a | a+b | b`, with a carry into the hundreds when a + b ≥ 10 — which is
+exactly when the hundreds digit exceeds the middle digit. Why D5 works: 9 × (10t + u) = 90t + 9u, and
+9u ends in 10 − u while the rest is 9t + (u − 1) < 9(t + 1).
+
+### Fractions, decimals, percentages (Optiver)
+F1 fraction↔decimal table (n/8, n/16, thirds, sixths, sevenths); F2 percentage swap (24% of 50 = 50% of 24);
+F3 missing operand → inverse operation plus magnitude estimate; F4 cancel before multiplying fractions;
+F5 dividing by a fraction = multiplying by its reciprocal (÷0.25 = ×4).
+
+### Multiple-choice elimination (Optiver)
+E1 last digit (units digit of a product = product of units digits); E2 magnitude (round to one
+significant figure); E3 digit sum / casting out nines; E4 parity.
+
+### Facts to memorise (drilled by retrieval, not explained by tricks)
+Tables to 12 × 12 (Zetamac) and ideally 19 × 19 (Optiver); squares to 25; common fraction↔decimal pairs.
+
+## 7. Trick system design (next step)
 
 ```
-src/armath/
-  domain/        # value objects: Operation, Problem, Answer (exact Fraction), Attempt, SessionConfig
-  generators/    # ProblemGenerator protocol; RangeGenerator (Zetamac), OptiverGenerator, TrickGenerator
-  tricks/        # Trick base class + registry; one module per trick family
-  modes/         # GameMode/Session, ScoringPolicy (count, ±1), timers, answer checking, MC distractors
-  analytics/     # per-attempt features, baselines, weakness scores, recommender, spaced repetition
-  persistence/   # repository ports + JSON (de)serialization, export/import
-  ui/            # presenters (pure Python, tested with fake views)
-  web/           # Pyodide adapters only: DOM views, localStorage repository, clock
-web/             # index.html, CSS themes, bootstrap.js (loads Pyodide + our wheel)
-tests/
+tricks/
+  base.py          # Trick (ABC) + metadata
+  explanation.py   # Step, Explanation
+  registry.py      # TrickRegistry: all(), get(id), applicable(problem), best(problem)
+  addition.py, subtraction.py, multiplication.py, division.py   # one class per trick
 ```
+- **`Trick`** (abstract, Open/Closed — adding a trick never changes existing code):
+  - metadata: `id`, `name`, `summary` (the rule in one line), `operation`, `priority`, `fallback`;
+  - `applies_to(problem) -> bool` — precise, cheap predicate;
+  - `explain(problem) -> Explanation` — steps templated on the real numbers, each step carrying the
+    intermediate value, ending at the answer;
+  - `generator(...) -> ProblemGenerator` — problems where the trick applies (plugs straight into
+    `SessionPlan`, so trick drills are just another plan).
+- **Choosing the best trick:** highest-priority applicable trick; fallbacks have the lowest priority.
+  Later: a per-user cost model (measured speed per trick) instead of fixed priorities.
+- **Verification by property tests over the registry:** for every trick and many generated problems —
+  `applies_to` holds, the explanation's final value equals the answer, every step's arithmetic is exact,
+  and every problem of an operation has a fallback. This keeps a growing catalogue correct.
+- **Learning loop (step 6):** results screen → "why was this slow?" shows the best trick's worked steps →
+  "Practise this trick" → blocked drill with hints fading → mixed round with look-alikes →
+  before/after comparison; tricks come back later via spaced repetition.
 
-Key design points:
-- **`Trick` is the unit of extension (Open/Closed).** Each trick class provides:
-  `applies_to(problem)`, `explain(problem) -> list[Step]` (templated on the real numbers),
-  `generate(rng) -> Problem` (only problems where the trick applies), plus metadata (name, category, difficulty).
-  Adding a trick = one new class + registration + tests; nothing else changes.
-- **Exact arithmetic:** answers stored as `fractions.Fraction` (so `138.6` is exact); parser accepts `0.125`, `.125`, `1/8`.
-- **Injected `Clock` and `random.Random`** → deterministic tests.
-- **Strategy objects** for scoring (Zetamac count vs Optiver ±1), answer input (typed vs multiple choice) and
-  distractor generation (misplaced decimal, off-by-one digit, ±10, wrong carry).
-- **Repository protocol** for attempts/sessions: in-memory (tests), localStorage (web), JSON export/import (backup).
-- **Presenters (MVP)** hold UI logic in Python and talk to a `View` protocol; the DOM view is a thin adapter.
+## 8. Review findings and improvement backlog
 
-### Tooling
-uv (project + lockfile), pytest (+ pytest-cov), Hypothesis for property tests
-(every generated problem's answer is correct; every trick's `explain` ends at the right answer; `generate` output
-satisfies `applies_to`), ruff (lint + format), mypy or pyright (strict).
-GitHub Actions: test → `uv build` wheel → assemble `web/` + wheel → deploy to Pages.
-Later: Playwright end-to-end tests against the static site.
+Fixed during the review:
+- Zetamac-mode accuracy was always 100% (wrong answers are never submitted) → attempts now record
+  corrections and time to first keystroke; accuracy is now "first try" (correct without deleting).
+- Durations used the wall clock (a clock adjustment mid-game could crash it) → monotonic clock.
+- CI now also runs on Python 3.14, which is what Pyodide uses in the browser.
 
-## 4. Detecting "which problems went worse"
+Backlog (not urgent):
+- Store the structured session configuration in each record (not only the mode name) so scores can be
+  filtered and compared reliably.
+- Exclude or soften the first problem's time (includes reacting to the screen change), or add a 3-2-1 start.
+- Self-host the fonts (privacy/GDPR for a public site, works offline).
+- Warn when browser storage is unavailable or full; JSON export/import as a backup.
+- iOS numeric keyboards (`inputmode="decimal"`) have no minus key — matters for Optiver negatives.
+- GitHub Pages deploy workflow; optional service worker for offline use.
 
-Raw time is misleading (47×83 is inherently slower than 3×4), so compare against an expectation:
-1. Every attempt records: problem, features (operation, operand digit counts, carries/borrows, decimal places,
-   missing-operand, which tricks apply), response time, correctness, mode.
-2. Normalize time: subtract an estimated typing cost per answer digit (answers auto-submit in Zetamac style).
-3. Expected time = your own recent median for the same feature bucket (e.g. "1-digit × 2-digit, 1 carry");
-   slowness = time / expected. Use medians/MAD (robust to outliers) and exponential decay so recent sessions count more.
-4. Weakness score per bucket and per trick = weighted mix of slowness and error rate, with a minimum sample size.
-5. Recommender: rank tricks by (weakness of problems where the trick applies) × (how common those problems are in the
-   target test). Show "You averaged 6.2 s on ×11 problems vs 2.1 s typical → here's the trick → drill it".
-6. Spaced repetition (Leitner boxes) re-queues specific slow/missed problems in learning mode.
+## 9. Roadmap
 
-## 5. Trick catalogue v0 (to be refined and verified per trick)
+1. ~~Scaffold~~ 2. ~~Domain, Zetamac generator, sessions, CLI~~ 3. ~~Web version~~
+4. **Trick engine:** base, registry, explanations, property tests; first tricks for Zetamac ranges
+   (A1–A2, S1–S3, M1–M9, D1–D5).
+5. **Learning mode:** explanations on the results screen, trick drills (blocked → interleaved),
+   trick library screen.
+6. **Analytics:** feature buckets, baselines, weakness scores, recommender, progress screen.
+7. **Optiver 80-in-8:** decimals/fractions, missing operand, MC with distractors, ±1 scoring, O-tricks.
+8. **Polish:** facts mode with spaced repetition, backlog items, GitHub Pages deploy.
 
-Every problem must always have at least one applicable strategy — general methods act as fallbacks.
-
-**Addition / subtraction**
-1. Left-to-right addition (hundreds, then tens, then units) — general fallback.
-2. Round and compensate: 47 + 38 = 47 + 40 − 2; 523 − 198 = 523 − 200 + 2.
-3. Complements to 100/1000 ("all from 9, last from 10"): 1000 − 387 = 613.
-4. Subtract by counting up: 82 − 57 → 57→60→82 = 3 + 22 = 25.
-5. Make pairs of 10/100 when summing several numbers.
-
-**Multiplication**
-6. Distributive split (general fallback, the core Zetamac skill): 7 × 68 = 420 + 56.
-7. ×5 = ×10 ÷ 2; ×25 = ×100 ÷ 4; ×50 = ×100 ÷ 2; ×125 = ×1000 ÷ 8.
-8. ×9 = ×10 − n; ×99 = ×100 − n; ×11 = ×10 + n.
-9. ×11 for two-digit numbers: put the digit sum in the middle (carry if ≥ 10): 35 × 11 = 385, 67 × 11 = 737.
-10. Near-round multiplier: ×19 = ×20 − n, ×21 = ×20 + n, ×15 = ×10 + half.
-11. Doubling and halving: 16 × 35 = 8 × 70 = 560.
-12. Factorization / regrouping: 36 × 25 = 9 × 4 × 25 = 900.
-13. Difference of squares: 47 × 53 = 50² − 3² = 2491.
-14. Squares ending in 5: n5² = n(n+1) | 25 → 65² = 4225.
-15. Squares near 50: (50 + k)² = (25 + k) hundreds + k² → 53² = 2809.
-16. Squares near 100 / products near 100 (base method): 97 × 96 = (97 − 4) | 3 × 4 = 9312.
-17. Same tens digit, units summing to 10: 43 × 47 = 4 × 5 | 3 × 7 = 2021.
-18. Teens × teens: 13 × 17 = (13 + 7) × 10 + 3 × 7 = 221.
-19. Cross-multiplication for general 2-digit × 2-digit.
-20. Squares via (a ± b)² and memorized squares to 25–30.
-21. Decimals: multiply as integers, then place the decimal point (0.3 × 0.07 = 21 × 10⁻³).
-
-**Division**
-22. ÷5 = ×2 ÷ 10; ÷25 = ×4 ÷ 100; ÷125 = ×8 ÷ 1000.
-23. Division as a missing factor with chunking: 648 ÷ 12 → 12 × 50 = 600, 48 = 12 × 4 → 54.
-24. Simplify first by a common factor: 168 ÷ 24 = 21 ÷ 3 = 7.
-25. Repeated halving for ÷4, ÷8.
-26. Decimal divisors: shift both decimal points to make the divisor an integer.
-
-**Fractions / decimals / percentages (Optiver)**
-27. Fraction↔decimal table: 1/2…1/12, n/8, 1/16, sevenths (1/7 = 0.142857…).
-28. Percentage swap: x% of y = y% of x (24% of 50 = 50% of 24).
-29. Missing operand → inverse operation plus magnitude estimate: 66 × ? = 138.6 → 2.1.
-30. Fraction add/sub via common denominator: a/b + c/d = (ad + bc)/bd, then simplify.
-
-**Multiple-choice elimination (Optiver)**
-31. Last-digit check: units digit of a product = product of units digits (mod 10).
-32. Magnitude check: round to 1 significant figure to discard wrong options.
-33. Digit-sum / casting out nines and parity checks.
-
-## 6. Proposed roadmap
-
-1. Scaffold: uv project, pytest, ruff, type checker, CI.
-2. Domain + Zetamac-style generator + session/scoring (CLI adapter for quick manual testing).
-3. Web shell: Pyodide bootstrap, game screen, themes (light, dark, + a few more), localStorage persistence.
-4. Attempt features + analytics + progress screen (history, per-category times, multiplication heatmap).
-5. Trick engine: base class, registry, first ~10 tricks with explanations and generators.
-6. Learning mode: post-session review of slowest problems → explanation → trick drill; spaced repetition.
-7. Optiver 80-in-8 mode: decimals/fractions, missing operand, MC with distractors, ±1 scoring.
-8. Polish: presets, settings, export/import, PWA/offline, GitHub Pages deploy.
+(Tricks moved ahead of analytics: the learning loop can start from "your slowest problems" right away,
+and weakness detection then has trick applicability to aggregate by.)
 
 ## Sources
 - [Optiver 80 in 8 — quantvault](https://quantvault.org/optiver-80-in-8.html)
+- [Optiver test — JobTestPrep](https://www.jobtestprep.com/optiver-test)
 - [Zetamac practice — quantvault](https://quantvault.org/zetamac-practice.html)
+- [Zetamac strategies — Geoffrey Lee](https://www.geoffreylee.me/zetamac)
 - [zetamac-tracker (GitHub)](https://github.com/MatthewC141/zetamac-tracker)
+- [Mental Math Trainer (mentalmath.online)](https://www.mentalmath.online/), [Quantercise](https://quantercise.com/mental-math), [Mind Math Trainer (GitHub)](https://github.com/shubhamsingh-007/mentalmathtrainer)
 - [Mental math tips and tricks — tradinginterview.com](https://www.tradinginterview.com/courses/mental-arithmetic/lessons/mental-math-tips-and-tricks-for-quick-calculations/)
 - [Quant mental math questions — quantt](https://www.quantt.co.uk/resources/quant-mental-math-questions)
+- A. Benjamin & M. Shermer, *Secrets of Mental Math* (close-together, factoring, up-and-down squaring)
+- [Nuggets from Vedic Mathematics — UCSD](https://cseweb.ucsd.edu//~gupta/vedic.html)
+- [Rohrer et al. 2015, Interleaved Practice Improves Mathematics Learning](http://uweb.cas.usf.edu/~drohrer/pdfs/Rohrer_et_al_2015JEdPsych.pdf); [2019 RCT](https://gwern.net/doc/psychology/spaced-repetition/2019-rohrer.pdf)
+- [Siegler, Strategy choice procedures and multiplication skill](https://www.researchgate.net/publication/20184024_Strategy_Choice_Procedures_and_the_Development_of_Multiplication_Skill)
+- [Renkl et al., Fading worked-out solution steps](https://www.academia.edu/1126007/From_studying_examples_to_solving_problems_Fading_worked_out_solution_steps_helps_learning)
 - [PyScript page load time — John Hanley](https://www.jhanley.com/blog/pyscript-page-load-time/)

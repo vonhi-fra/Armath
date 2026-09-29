@@ -100,7 +100,7 @@
         <p id="history-empty" class="muted">No sessions yet. Your scores will show up here.</p>
         <div class="table-wrap">
           <table id="history-table" hidden>
-            <thead><tr><th>When</th><th>Mode</th><th class="num">Score</th><th class="num">Accuracy</th></tr></thead>
+            <thead><tr><th>When</th><th>Mode</th><th class="num">Score</th><th class="num" title="Right without deleting anything">First try</th></tr></thead>
             <tbody id="history-rows"></tbody>
           </table>
         </div>
@@ -126,7 +126,7 @@
         <p class="big-score"><span id="result-score">0</span><span class="big-score-label">score</span></p>
         <dl class="stats">
           <div><dt>Answered</dt><dd id="result-answered"></dd></div>
-          <div><dt>Accuracy</dt><dd id="result-accuracy"></dd></div>
+          <div><dt title="Right without deleting anything">First try</dt><dd id="result-first-try"></dd></div>
           <div><dt>Avg time</dt><dd id="result-mean"></dd></div>
         </dl>
         <div id="slowest" hidden>

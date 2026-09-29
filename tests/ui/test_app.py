@@ -194,7 +194,7 @@ def test_home_lists_recent_sessions_newest_first(harness: Harness) -> None:
 
     harness.app.open_home()
 
-    assert [(row.mode, row.accuracy) for row in harness.screen.history] == [
+    assert [(row.mode, row.first_try_rate) for row in harness.screen.history] == [
         ("new", 0.5),
         ("old", 1.0),
     ]

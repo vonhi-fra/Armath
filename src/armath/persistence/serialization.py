@@ -57,15 +57,21 @@ def attempt_to_dict(attempt: Attempt) -> JsonDict:
         "response": str(attempt.response),
         "elapsed_seconds": attempt.elapsed_seconds,
         "answered_at": attempt.answered_at.isoformat(),
+        "first_input_seconds": attempt.first_input_seconds,
+        "corrections": attempt.corrections,
     }
 
 
 def attempt_from_dict(data: JsonDict) -> Attempt:
+    # Typing details were added later; older records simply lack them.
+    first_input = data.get("first_input_seconds")
     return Attempt(
         problem=problem_from_dict(data["problem"]),
         response=Fraction(data["response"]),
         elapsed_seconds=float(data["elapsed_seconds"]),
         answered_at=datetime.fromisoformat(data["answered_at"]),
+        first_input_seconds=None if first_input is None else float(first_input),
+        corrections=int(data.get("corrections", 0)),
     )
 
 

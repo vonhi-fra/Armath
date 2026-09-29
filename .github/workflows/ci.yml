@@ -8,13 +8,17 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 3.12 is the minimum supported; 3.14 is what Pyodide runs in the browser.
+        python-version: ["3.12", "3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
       - name: Install dependencies
-        run: uv sync --locked
+        run: uv sync --locked --python ${{ matrix.python-version }}
       - name: Lint
         run: uv run ruff check
       - name: Format

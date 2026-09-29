@@ -36,6 +36,27 @@ class SessionOverError(RuntimeError):
     """Raised when answering after the session has ended."""
 
 
+class _ProblemTracker:
+    """How the user worked on the current problem: when it appeared, when typing started and
+    how many times they deleted what they typed."""
+
+    def __init__(self, shown_at: float) -> None:
+        self.shown_at = shown_at
+        self.first_input_at: float | None = None
+        self.corrections = 0
+        self._text = ""
+        self._deleting = False
+
+    def typed(self, text: str, at: float) -> None:
+        if text and self.first_input_at is None:
+            self.first_input_at = at
+        deleting = len(text) < len(self._text)
+        if deleting and not self._deleting:
+            self.corrections += 1
+        self._deleting = deleting
+        self._text = text
+
+
 class Session:
     """Starts on creation and shows the first problem immediately."""
 
@@ -44,7 +65,8 @@ class Session:
         self._clock = clock
         self._rng = rng
         self._started_at = clock.now()
-        self._shown_at = self._started_at
+        self._started_mono = clock.monotonic()
+        self._tracker = _ProblemTracker(self._started_mono)
         self._current = plan.generator.generate(rng)
         self._attempts: list[Attempt] = []
 
@@ -62,7 +84,7 @@ class Session:
 
     @property
     def elapsed(self) -> timedelta:
-        return self._clock.now() - self._started_at
+        return timedelta(seconds=self._clock.monotonic() - self._started_mono)
 
     @property
     def remaining_time(self) -> timedelta | None:
@@ -87,10 +109,14 @@ class Session:
         )
 
     def answer(self, text: str) -> Attempt | None:
-        """Submit typed text; returns the attempt if it was accepted, else ``None``."""
+        """Submit the answer box's current text (call on every change).
+
+        Returns the attempt if it was accepted, else ``None``.
+        """
+        self._ensure_running()
+        self._tracker.typed(text, self._clock.monotonic())
         response = parse_answer(text)
         if response is None:
-            self._ensure_running()
             return None
         return self.answer_value(response)
 
@@ -99,16 +125,20 @@ class Session:
         self._ensure_running()
         if not self._plan.answering.accepts(self._current, response):
             return None
-        now = self._clock.now()
+        tracker = self._tracker
+        moment = self._clock.monotonic()
+        first_input = tracker.first_input_at
         attempt = Attempt(
             problem=self._current,
             response=response,
-            elapsed_seconds=(now - self._shown_at).total_seconds(),
-            answered_at=now,
+            elapsed_seconds=moment - tracker.shown_at,
+            answered_at=self._clock.now(),
+            first_input_seconds=None if first_input is None else first_input - tracker.shown_at,
+            corrections=tracker.corrections,
         )
         self._attempts.append(attempt)
         self._current = self._plan.generator.generate(self._rng)
-        self._shown_at = now
+        self._tracker = _ProblemTracker(moment)
         return attempt
 
     def _ensure_running(self) -> None:

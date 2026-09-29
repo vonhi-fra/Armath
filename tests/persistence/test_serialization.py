@@ -38,6 +38,26 @@ def test_record_round_trip() -> None:
     assert record_from_dict(_json_round_trip(record_to_dict(original))) == original
 
 
+def test_record_round_trip_keeps_typing_details() -> None:
+    original = record(attempt(corrections=2))
+
+    restored = record_from_dict(_json_round_trip(record_to_dict(original)))
+
+    assert restored.attempts[0].corrections == 2
+    assert restored.attempts[0].first_input_seconds == 1.0
+
+
+def test_records_saved_before_typing_details_still_load() -> None:
+    data = record_to_dict(record(attempt()))
+    for item in data["attempts"]:
+        del item["first_input_seconds"], item["corrections"]
+
+    restored = record_from_dict(_json_round_trip(data))
+
+    assert restored.attempts[0].first_input_seconds is None
+    assert restored.attempts[0].corrections == 0
+
+
 def test_settings_round_trip() -> None:
     original = PracticeSettings(
         zetamac=ZetamacSettings(

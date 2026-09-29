@@ -3,7 +3,7 @@
 from collections.abc import Callable, Sequence
 from random import Random
 
-from armath.analytics import summarize
+from armath.analytics import first_try_rate, summarize
 from armath.domain import SessionRecord
 from armath.modes import Clock, Session, SessionPlan
 from armath.persistence import HistoryRepository, SettingsRepository
@@ -42,13 +42,10 @@ class HomePresenter:
 
 def recent_history(records: Sequence[SessionRecord]) -> list[HistoryRow]:
     """The latest sessions first."""
-    rows = []
-    for record in reversed(records[-RECENT_SESSIONS:]):
-        answered = len(record.attempts)
-        correct = sum(attempt.is_correct for attempt in record.attempts)
-        accuracy = correct / answered if answered else None
-        rows.append(HistoryRow(record.started_at, record.mode, record.score, accuracy))
-    return rows
+    return [
+        HistoryRow(record.started_at, record.mode, record.score, first_try_rate(record.attempts))
+        for record in reversed(records[-RECENT_SESSIONS:])
+    ]
 
 
 class GamePresenter:
