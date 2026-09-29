@@ -6,6 +6,9 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
 
+[project.scripts]
+armath = "armath.cli:main"
+
 [dependency-groups]
 dev = [
     "hypothesis>=6.100",
