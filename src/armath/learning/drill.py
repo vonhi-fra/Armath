@@ -11,7 +11,7 @@ from random import Random
 from statistics import fmean
 
 from armath.analytics import first_try_rate
-from armath.domain import Attempt, Problem, SessionRecord
+from armath.domain import Attempt, Problem, SessionKind, SessionRecord
 from armath.generators import (
     FilteredGenerator,
     ProblemGenerator,
@@ -106,6 +106,7 @@ class Drill:
             answering=UntilCorrect(),
             question_limit=self.settings.total,
             name=self.name,
+            kind=SessionKind.DRILL,
         )
 
     def hint(self, answered: int) -> str | None:

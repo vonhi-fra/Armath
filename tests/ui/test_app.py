@@ -4,15 +4,16 @@ from datetime import timedelta
 from random import Random
 
 import pytest
-from factories import START, attempt, record
+from factories import START, attempt, problem, record
 
-from armath.analytics import SessionSummary
+from armath.analytics import SessionSummary, TrickInsight
+from armath.domain import Operation
 from armath.learning import DrillReport, LibraryEntry, ReviewItem, TrickLesson
 from armath.modes import ManualClock
 from armath.persistence import MemoryStore, StoredHistory, StoredSettings
 from armath.settings import PracticeSettings
 from armath.tricks import default_registry
-from armath.ui import App, HistoryRow, RangeFields, Screen, SettingsForm
+from armath.ui import App, HistoryRow, ProgressReport, RangeFields, Screen, SettingsForm
 from armath.ui.formatting import format_clock
 
 
@@ -36,6 +37,8 @@ class FakeScreen:
         self.review: list[ReviewItem] = []
         self.drill_report: DrillReport | None = None
         self.library: list[LibraryEntry] = []
+        self.recommended: list[TrickInsight] = []
+        self.progress: ProgressReport | None = None
 
     def go_to(self, screen: Screen) -> None:
         self.screen = screen
@@ -82,6 +85,12 @@ class FakeScreen:
     def show_library(self, entries: Sequence[LibraryEntry]) -> None:
         self.library = list(entries)
 
+    def show_recommendations(self, tricks: Sequence[TrickInsight]) -> None:
+        self.recommended = list(tricks)
+
+    def show_progress(self, report: ProgressReport) -> None:
+        self.progress = report
+
 
 class Harness:
     def __init__(self) -> None:
@@ -94,6 +103,7 @@ class Harness:
             game_view=self.screen,
             results_view=self.screen,
             library_view=self.screen,
+            progress_view=self.screen,
             history=StoredHistory(self.store),
             settings=StoredSettings(self.store),
             registry=default_registry(),
@@ -318,6 +328,59 @@ def test_unknown_trick_is_ignored(harness: Harness) -> None:
     harness.app.start_drill("no-such-trick")
 
     assert harness.screen.screen is Screen.HOME
+
+
+def _slow_multiplication_sessions(history: StoredHistory) -> None:
+    """Two practice sessions where ×9 problems are much slower than everything else."""
+    fast = [attempt(problem(2, Operation.ADD, 3), seconds=1) for _ in range(6)]
+    slow = [attempt(problem(9, Operation.MULTIPLY, 74), seconds=6) for _ in range(3)]
+    for _ in range(2):
+        history.add(record(attempt(seconds=20), *fast, *slow, mode="Zetamac 120s"))
+
+
+def test_home_recommends_the_trick_that_saves_most_time(harness: Harness) -> None:
+    _slow_multiplication_sessions(StoredHistory(harness.store))
+
+    harness.app.open_home()
+
+    assert [insight.trick_id for insight in harness.screen.recommended] == ["mul-9"]
+
+
+def test_progress_shows_the_most_played_mode(harness: Harness) -> None:
+    history = StoredHistory(harness.store)
+    _slow_multiplication_sessions(history)
+    history.add(record(attempt(), mode="Zetamac 30s"))
+
+    harness.app.open_progress()
+
+    report = harness.screen.progress
+    assert harness.screen.screen is Screen.PROGRESS
+    assert report is not None
+    assert report.modes == ("Zetamac 120s", "Zetamac 30s")
+    assert report.selected is not None
+    assert report.selected.mode == "Zetamac 120s"
+    assert report.chart is not None
+    assert len(report.chart.points) == 2
+    assert report.tricks[0].trick_id == "mul-9"
+    assert {kind.label for kind in report.kinds} >= {"1-digit + 1-digit", "1-digit × 2-digit"}
+
+
+def test_progress_can_switch_mode(harness: Harness) -> None:
+    history = StoredHistory(harness.store)
+    _slow_multiplication_sessions(history)
+    history.add(record(attempt(), mode="Zetamac 30s"))
+
+    harness.app.open_progress("Zetamac 30s")
+
+    assert harness.screen.progress is not None
+    assert harness.screen.progress.selected is not None
+    assert harness.screen.progress.selected.mode == "Zetamac 30s"
+
+
+def test_progress_without_history(harness: Harness) -> None:
+    harness.app.open_progress()
+
+    assert harness.screen.progress == ProgressReport((), None, None, (), ())
 
 
 def test_library_lists_every_trick(harness: Harness) -> None:

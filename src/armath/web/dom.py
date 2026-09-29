@@ -14,13 +14,14 @@ from typing import Any, ClassVar
 from js import Date, Object, document, localStorage, window  # type: ignore[import-not-found]
 from pyodide.ffi import create_proxy, to_js  # type: ignore[import-not-found]
 
-from armath.analytics import SessionSummary
+from armath.analytics import ScorePoint, SessionSummary, TrickInsight
 from armath.domain import Operation
 from armath.learning import DrillReport, LibraryEntry, ReviewItem, TrickLesson
 from armath.modes import SystemClock
 from armath.persistence import MemoryStore, StoredHistory, StoredSettings
 from armath.tricks import default_registry
-from armath.ui import App, HistoryRow, RangeFields, Screen, SettingsForm
+from armath.ui import App, HistoryRow, ProgressReport, RangeFields, Screen, SettingsForm
+from armath.ui.charts import LineChartLayout
 
 _OPERATION_IDS = {
     Operation.ADD: "op-add",
@@ -80,8 +81,8 @@ def _format_date(when: datetime) -> str:
     return str(Date.new(when.isoformat()).toLocaleString([], options))
 
 
-def _practise_button(trick_id: str) -> Any:
-    button = _create("button", "Practise this trick", "button primary small")
+def _practise_button(trick_id: str, text: str = "Practise this trick") -> Any:
+    button = _create("button", text, "button primary small")
     button.type = "button"
     button.dataset.trick = trick_id
     return button
@@ -140,6 +141,12 @@ class DomNavigator:
         Screen.GAME: "answer",
         Screen.RESULTS: "play-again",
         Screen.LIBRARY: "library-title",
+        Screen.PROGRESS: "progress-title",
+    }
+    _NAV: ClassVar[dict[str, Screen]] = {
+        "nav-home": Screen.HOME,
+        "nav-progress": Screen.PROGRESS,
+        "nav-library": Screen.LIBRARY,
     }
 
     def __init__(self) -> None:
@@ -150,7 +157,7 @@ class DomNavigator:
         for candidate in Screen:
             _element(f"screen-{candidate.value}").hidden = candidate is not screen
         document.body.dataset.screen = screen.value
-        for nav, target in (("nav-home", Screen.HOME), ("nav-library", Screen.LIBRARY)):
+        for nav, target in self._NAV.items():
             _element(nav).classList.toggle("active", screen is target)
         window.scrollTo(0, 0)
         _element(self._FOCUS[screen]).focus()
@@ -199,6 +206,26 @@ class DomHomeView:
             body.appendChild(tr)
         _element("history-empty").hidden = bool(rows)
         _element("history-table").hidden = not rows
+
+    def show_recommendations(self, tricks: Sequence[TrickInsight]) -> None:
+        box = _element("recommendation-list")
+        box.replaceChildren()
+        for insight in tricks:
+            item = _create("li", class_name="recommendation")
+            text = _create("div")
+            text.appendChild(_create("strong", insight.name))
+            text.appendChild(
+                _create(
+                    "span",
+                    f"{_percent(insight.share_of_time_lost)} of your lost time · "
+                    f"typically {_seconds(insight.median_seconds)} on these problems",
+                    "muted",
+                )
+            )
+            item.appendChild(text)
+            item.appendChild(_practise_button(insight.trick_id, "Practise"))
+            box.appendChild(item)
+        _element("recommendations").hidden = not tricks
 
 
 class DomGameView:
@@ -268,6 +295,219 @@ class DomResultsView:
         _element("drill-lookalike").textContent = _seconds(report.lookalike_seconds)
 
 
+SVG_NS = "http://www.w3.org/2000/svg"
+
+
+def _svg(tag: str, class_name: str = "", **attributes: object) -> Any:
+    element = document.createElementNS(SVG_NS, tag)
+    if class_name:
+        element.setAttribute("class", class_name)
+    for name, value in attributes.items():
+        element.setAttribute(name.replace("_", "-"), str(value))
+    return element
+
+
+def _trend(earlier: float | None, recent: float | None) -> str:
+    if earlier is None or recent is None:
+        return _MISSING
+    direction = "faster" if recent < earlier else "slower" if recent > earlier else "same"
+    return f"{earlier:.1f}s → {recent:.1f}s ({direction})"
+
+
+def _format_day(when: datetime) -> str:
+    options = to_js({"dateStyle": "medium"}, dict_converter=Object.fromEntries)
+    return str(Date.new(when.isoformat()).toLocaleDateString([], options))
+
+
+class ScoreChart:
+    """Draws a :class:`LineChartLayout` into ``#score-chart`` with a hover/keyboard crosshair."""
+
+    def __init__(self) -> None:
+        self._svg = _element("score-chart")
+        self._tooltip = _element("chart-tooltip")
+        self._layout: LineChartLayout | None = None
+        self._points: tuple[ScorePoint, ...] = ()
+        self._active: int | None = None
+        self._crosshair: Any = None
+        self._dots: list[Any] = []
+        _listen(self._svg, "pointermove", self._on_pointer)
+        _listen(self._svg, "pointerleave", lambda _: self._select(None))
+        _listen(self._svg, "focus", lambda _: self._select(len(self._points) - 1))
+        _listen(self._svg, "blur", lambda _: self._select(None))
+        _listen(self._svg, "keydown", self._on_key)
+
+    def draw(self, layout: LineChartLayout, points: tuple[ScorePoint, ...]) -> None:
+        self._layout, self._points, self._active = layout, points, None
+        svg = self._svg
+        svg.replaceChildren()
+        svg.setAttribute("viewBox", f"0 0 {layout.width} {layout.height}")
+        for tick in layout.y_ticks:
+            svg.appendChild(
+                _svg(
+                    "line",
+                    "chart-grid",
+                    x1=layout.left,
+                    x2=layout.right,
+                    y1=tick.position,
+                    y2=tick.position,
+                )
+            )
+            label = _svg("text", "chart-axis", x=layout.left - 8, y=tick.position, dy="0.32em")
+            label.setAttribute("text-anchor", "end")
+            label.textContent = tick.label
+            svg.appendChild(label)
+        for index in layout.x_tick_indexes:
+            label = _svg("text", "chart-axis", x=layout.points[index].x, y=layout.height - 6)
+            anchor = "start" if index == 0 and len(points) > 1 else "end" if index else "middle"
+            label.setAttribute("text-anchor", anchor)
+            label.textContent = _format_day(points[index].started_at)
+            svg.appendChild(label)
+        svg.appendChild(_svg("path", "chart-line", d=layout.path))
+        self._crosshair = _svg("line", "chart-crosshair", y1=layout.top, y2=layout.bottom)
+        self._crosshair.setAttribute("visibility", "hidden")
+        svg.appendChild(self._crosshair)
+        self._dots = []
+        for point in layout.points:
+            dot = _svg("circle", "chart-dot", cx=point.x, cy=point.y, r=4)
+            svg.appendChild(dot)
+            self._dots.append(dot)
+        last = layout.points[-1]
+        end_label = _svg("text", "chart-value", x=last.x, y=last.y - 12)
+        end_label.setAttribute("text-anchor", "end" if len(points) > 1 else "middle")
+        end_label.textContent = str(points[-1].score)
+        svg.appendChild(end_label)
+        self._tooltip.hidden = True
+
+    def _on_pointer(self, event: Any) -> None:
+        if self._layout is None:
+            return
+        box = self._svg.getBoundingClientRect()
+        x = (event.clientX - box.left) / box.width * self._layout.width
+        self._select(self._layout.nearest_index(x))
+
+    def _on_key(self, event: Any) -> None:
+        if self._active is None or event.key not in ("ArrowLeft", "ArrowRight"):
+            return
+        event.preventDefault()
+        step = -1 if event.key == "ArrowLeft" else 1
+        self._select(min(max(self._active + step, 0), len(self._points) - 1))
+
+    def _select(self, index: int | None) -> None:
+        layout = self._layout
+        if layout is None or not self._points:
+            return
+        if self._active is not None:
+            self._dots[self._active].classList.remove("active")
+        self._active = index
+        if index is None:
+            self._crosshair.setAttribute("visibility", "hidden")
+            self._tooltip.hidden = True
+            return
+        point = layout.points[index]
+        self._dots[index].classList.add("active")
+        self._crosshair.setAttribute("x1", str(point.x))
+        self._crosshair.setAttribute("x2", str(point.x))
+        self._crosshair.setAttribute("visibility", "visible")
+        data = self._points[index]
+        self._tooltip.replaceChildren(
+            _create("strong", str(data.score)), _create("span", _format_date(data.started_at))
+        )
+        self._tooltip.style.left = f"{point.x / layout.width * 100:.2f}%"
+        self._tooltip.style.top = f"{point.y / layout.height * 100:.2f}%"
+        self._tooltip.hidden = False
+
+
+class DomProgressView:
+    def __init__(self) -> None:
+        self._chart = ScoreChart()
+        _listen(_element("tricks-toggle"), "click", self._toggle_tricks)
+
+    @staticmethod
+    def _toggle_tricks(_: Any) -> None:
+        expanded = _element("tricks-card").classList.toggle("expanded")
+        _element("tricks-toggle").textContent = (
+            "Show fewer" if expanded else f"Show all {len(_element('trick-rows').children)} tricks"
+        )
+
+    def show_progress(self, report: ProgressReport) -> None:
+        selected = report.selected
+        _element("progress-empty").hidden = selected is not None
+        _element("progress-body").hidden = selected is None
+        picker = _element("progress-mode")
+        picker.replaceChildren()
+        for mode in report.modes:
+            option = _create("option", mode)
+            option.value = mode
+            picker.appendChild(option)
+        if selected is None or report.chart is None:
+            return
+        picker.value = selected.mode
+        _element("progress-sessions").textContent = str(selected.sessions)
+        _element("progress-best").textContent = str(selected.best)
+        _element("progress-latest").textContent = str(selected.latest)
+        _element("chart-title").textContent = f"Score per session · {selected.mode}"
+        self._chart.draw(report.chart, selected.points)
+        self._fill_score_table(selected.points)
+        self._fill_tricks(report)
+        self._fill_kinds(report)
+
+    @staticmethod
+    def _fill_score_table(points: tuple[ScorePoint, ...]) -> None:
+        body = _element("score-rows")
+        body.replaceChildren()
+        for point in reversed(points):
+            row = _create("tr")
+            row.appendChild(_create("td", _format_date(point.started_at)))
+            row.appendChild(_create("td", str(point.score), "num"))
+            body.appendChild(row)
+
+    TOP_TRICKS = 8
+
+    def _fill_tricks(self, report: ProgressReport) -> None:
+        body = _element("trick-rows")
+        body.replaceChildren()
+        for index, insight in enumerate(report.tricks):
+            row = _create("tr", class_name="extra" if index >= self.TOP_TRICKS else "")
+            name = _create("td", insight.name)
+            if insight.is_general:
+                name.appendChild(_create("span", "general", "tag"))
+            row.appendChild(name)
+            row.appendChild(_create("td", str(insight.problems), "num"))
+            row.appendChild(_create("td", _seconds(insight.median_seconds), "num"))
+            lost = _create("td", class_name="num")
+            meter = _create("span", class_name="meter")
+            fill = _create("span", class_name="meter-fill")
+            fill.style.width = f"{insight.share_of_time_lost * 100:.0f}%"
+            meter.appendChild(fill)
+            lost.appendChild(meter)
+            lost.appendChild(document.createTextNode(_percent(insight.share_of_time_lost)))
+            row.appendChild(lost)
+            row.appendChild(_create("td", _trend(insight.earlier_seconds, insight.recent_seconds)))
+            action = _create("td")
+            action.appendChild(_practise_button(insight.trick_id, "Practise"))
+            row.appendChild(action)
+            body.appendChild(row)
+        card = _element("tricks-card")
+        card.hidden = not report.tricks
+        card.classList.remove("expanded")
+        toggle = _element("tricks-toggle")
+        toggle.hidden = len(report.tricks) <= self.TOP_TRICKS
+        toggle.textContent = f"Show all {len(report.tricks)} tricks"
+
+    @staticmethod
+    def _fill_kinds(report: ProgressReport) -> None:
+        body = _element("kind-rows")
+        body.replaceChildren()
+        for kind in report.kinds:
+            row = _create("tr")
+            row.appendChild(_create("td", f"{_OPERATION_NAMES[kind.operation]}: {kind.label}"))
+            row.appendChild(_create("td", str(kind.problems), "num"))
+            row.appendChild(_create("td", _seconds(kind.median_seconds), "num"))
+            row.appendChild(_create("td", _percent(kind.first_try_rate), "num"))
+            body.appendChild(row)
+        _element("kinds-card").hidden = not report.kinds
+
+
 class DomLibraryView:
     def show_library(self, entries: Sequence[LibraryEntry]) -> None:
         box = _element("library-list")
@@ -299,6 +539,7 @@ def main() -> None:
         game_view=DomGameView(),
         results_view=DomResultsView(),
         library_view=DomLibraryView(),
+        progress_view=DomProgressView(),
         history=StoredHistory(store),
         settings=StoredSettings(store),
         registry=default_registry(),
@@ -338,6 +579,10 @@ def main() -> None:
     _listen(_element("quit"), "click", lambda _: app.open_home())
     _listen(_element("nav-home"), "click", lambda _: app.open_home())
     _listen(_element("nav-library"), "click", lambda _: app.open_library())
+    _listen(_element("nav-progress"), "click", lambda _: app.open_progress())
+    _listen(
+        _element("progress-mode"), "change", lambda event: app.open_progress(event.target.value)
+    )
     _listen(document, "keydown", on_key)
     _listen(document, "click", on_click)
 

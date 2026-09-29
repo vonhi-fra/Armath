@@ -1,9 +1,10 @@
 import json
+from dataclasses import replace
 
 import pytest
 from factories import attempt, problem, record
 
-from armath.domain import Operand, Operation, Problem, Unknown
+from armath.domain import Operand, Operation, Problem, SessionKind, Unknown
 from armath.generators import IntRange, ZetamacSettings
 from armath.persistence.serialization import (
     problem_from_dict,
@@ -56,6 +57,22 @@ def test_records_saved_before_typing_details_still_load() -> None:
 
     assert restored.attempts[0].first_input_seconds is None
     assert restored.attempts[0].corrections == 0
+
+
+def test_record_kind_round_trips() -> None:
+    drill = replace(record(attempt(), mode="Drill: ×11"), kind=SessionKind.DRILL)
+
+    assert record_from_dict(_json_round_trip(record_to_dict(drill))).kind is SessionKind.DRILL
+
+
+def test_records_saved_before_kind_existed_infer_it_from_the_mode() -> None:
+    old_drill = record_to_dict(record(attempt(), mode="Drill: ×11"))
+    old_practice = record_to_dict(record(attempt(), mode="Zetamac 120s"))
+    for data in (old_drill, old_practice):
+        del data["kind"]
+
+    assert record_from_dict(old_drill).kind is SessionKind.DRILL
+    assert record_from_dict(old_practice).kind is SessionKind.PRACTICE
 
 
 def test_settings_round_trip() -> None:

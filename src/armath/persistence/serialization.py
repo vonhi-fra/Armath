@@ -14,6 +14,7 @@ from armath.domain import (
     Operand,
     Operation,
     Problem,
+    SessionKind,
     SessionRecord,
     Unknown,
 )
@@ -80,17 +81,25 @@ def record_to_dict(record: SessionRecord) -> JsonDict:
         "mode": record.mode,
         "started_at": record.started_at.isoformat(),
         "score": record.score,
+        "kind": record.kind.value,
         "attempts": [attempt_to_dict(attempt) for attempt in record.attempts],
     }
 
 
 def record_from_dict(data: JsonDict) -> SessionRecord:
+    mode = str(data["mode"])
     return SessionRecord(
-        mode=str(data["mode"]),
+        mode=mode,
         started_at=datetime.fromisoformat(data["started_at"]),
         score=int(data["score"]),
         attempts=tuple(attempt_from_dict(item) for item in data["attempts"]),
+        kind=SessionKind(data["kind"]) if "kind" in data else _legacy_kind(mode),
     )
+
+
+def _legacy_kind(mode: str) -> SessionKind:
+    """Records saved before ``kind`` existed: drills were only recognisable by their name."""
+    return SessionKind.DRILL if mode.startswith("Drill:") else SessionKind.PRACTICE
 
 
 def _range_to_list(int_range: IntRange) -> list[int]:

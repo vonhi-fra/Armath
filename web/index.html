@@ -21,6 +21,7 @@
     </a>
     <nav class="nav" aria-label="Main">
       <button id="nav-home" class="nav-link" type="button">Practice</button>
+      <button id="nav-progress" class="nav-link" type="button">Progress</button>
       <button id="nav-library" class="nav-link" type="button">Tricks</button>
     </nav>
     <label class="theme-picker">
@@ -99,6 +100,12 @@
         <ul id="form-errors" class="errors" role="alert" hidden></ul>
       </form>
 
+      <section id="recommendations" class="card" aria-labelledby="recommendations-title" hidden>
+        <h2 id="recommendations-title">Recommended practice</h2>
+        <p class="muted">Where your recent sessions lost the most time, and the trick that fixes it.</p>
+        <ul id="recommendation-list" class="recommendation-list"></ul>
+      </section>
+
       <section class="card" aria-labelledby="history-title">
         <h2 id="history-title">Recent sessions</h2>
         <p id="history-empty" class="muted">No sessions yet. Your scores will show up here.</p>
@@ -156,6 +163,70 @@
         <p class="muted">Open one to see a faster way to solve it, then practise that trick.</p>
         <div id="review-list" class="review-list"></div>
       </section>
+    </section>
+
+    <section id="screen-progress" class="screen" hidden>
+      <div class="card">
+        <div class="progress-head">
+          <h1 id="progress-title" tabindex="-1">Progress</h1>
+          <label class="duration">
+            <span>Mode</span>
+            <select id="progress-mode"></select>
+          </label>
+        </div>
+        <p id="progress-empty" class="muted">Play a practice session and your progress will show up here.</p>
+      </div>
+
+      <div id="progress-body" class="screen-part" hidden>
+        <dl class="stats">
+          <div><dt>Sessions</dt><dd id="progress-sessions"></dd></div>
+          <div><dt>Best</dt><dd id="progress-best"></dd></div>
+          <div><dt>Latest</dt><dd id="progress-latest"></dd></div>
+        </dl>
+
+        <section class="card" aria-labelledby="chart-title">
+          <h2 id="chart-title">Score per session</h2>
+          <div class="chart-wrap">
+            <svg id="score-chart" class="chart" role="img" tabindex="0"
+                 aria-label="Score per session; use the arrow keys to read each session"></svg>
+            <div id="chart-tooltip" class="chart-tooltip" hidden></div>
+          </div>
+          <details class="table-view">
+            <summary>Show as a table</summary>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>When</th><th class="num">Score</th></tr></thead>
+                <tbody id="score-rows"></tbody>
+              </table>
+            </div>
+          </details>
+        </section>
+
+        <section id="tricks-card" class="card" aria-labelledby="tricks-title">
+          <h2 id="tricks-title">Where you lose time</h2>
+          <p class="muted">From your last 20 practice sessions. Each problem counts towards the best trick for it;
+            seconds above your typical time are “lost”. Trend compares older and newer sessions.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Trick</th><th class="num">Problems</th><th class="num">Typical</th>
+                <th class="num">Time lost</th><th>Trend</th><th></th></tr></thead>
+              <tbody id="trick-rows"></tbody>
+            </table>
+          </div>
+          <button id="tricks-toggle" class="button ghost small" type="button" hidden></button>
+        </section>
+
+        <section id="kinds-card" class="card" aria-labelledby="kinds-title">
+          <h2 id="kinds-title">By problem type</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Type</th><th class="num">Problems</th><th class="num">Typical</th>
+                <th class="num">First try</th></tr></thead>
+              <tbody id="kind-rows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </section>
 
     <section id="screen-library" class="screen" hidden>

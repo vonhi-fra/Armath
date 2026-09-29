@@ -8,6 +8,8 @@ from armath.ui.views import (
     HomeView,
     LibraryView,
     Navigator,
+    ProgressReport,
+    ProgressView,
     ResultsView,
     Screen,
 )
@@ -20,6 +22,8 @@ __all__ = [
     "HomeView",
     "LibraryView",
     "Navigator",
+    "ProgressReport",
+    "ProgressView",
     "RangeFields",
     "ResultsView",
     "Screen",

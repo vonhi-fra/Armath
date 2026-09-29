@@ -6,8 +6,9 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Protocol
 
-from armath.analytics import SessionSummary
+from armath.analytics import KindInsight, ModeProgress, SessionSummary, TrickInsight
 from armath.learning import DrillReport, LibraryEntry, ReviewItem, TrickLesson
+from armath.ui.charts import LineChartLayout
 from armath.ui.settings_form import SettingsForm
 
 
@@ -16,6 +17,16 @@ class Screen(StrEnum):
     GAME = "game"
     RESULTS = "results"
     LIBRARY = "library"
+    PROGRESS = "progress"
+
+
+@dataclass(frozen=True)
+class ProgressReport:
+    modes: tuple[str, ...]
+    selected: ModeProgress | None
+    chart: LineChartLayout | None
+    tricks: tuple[TrickInsight, ...]
+    kinds: tuple[KindInsight, ...]
 
 
 @dataclass(frozen=True)
@@ -36,6 +47,8 @@ class HomeView(Protocol):
     def show_form_errors(self, errors: Sequence[str]) -> None: ...
 
     def show_history(self, rows: Sequence[HistoryRow]) -> None: ...
+
+    def show_recommendations(self, tricks: Sequence[TrickInsight]) -> None: ...
 
 
 class GameView(Protocol):
@@ -68,3 +81,7 @@ class ResultsView(Protocol):
 
 class LibraryView(Protocol):
     def show_library(self, entries: Sequence[LibraryEntry]) -> None: ...
+
+
+class ProgressView(Protocol):
+    def show_progress(self, report: ProgressReport) -> None: ...

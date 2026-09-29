@@ -4,16 +4,32 @@ from collections.abc import Callable, Sequence
 from random import Random
 from typing import Protocol
 
-from armath.analytics import first_try_rate, summarize
+from armath.analytics import (
+    first_try_rate,
+    kind_insights,
+    mode_progress,
+    recommendations,
+    summarize,
+    trick_insights,
+)
 from armath.domain import Problem, SessionRecord
 from armath.learning import Drill, TrickLesson, library, review
 from armath.modes import Clock, Session, SessionPlan
 from armath.persistence import HistoryRepository, SettingsRepository
 from armath.settings import PracticeSettings
 from armath.tricks import TrickRegistry
+from armath.ui.charts import line_chart
 from armath.ui.formatting import format_clock
 from armath.ui.settings_form import FormError, SettingsForm
-from armath.ui.views import GameView, HistoryRow, HomeView, LibraryView, ResultsView
+from armath.ui.views import (
+    GameView,
+    HistoryRow,
+    HomeView,
+    LibraryView,
+    ProgressReport,
+    ProgressView,
+    ResultsView,
+)
 
 RECENT_SESSIONS = 10
 REVIEWED_PROBLEMS = 5
@@ -21,16 +37,23 @@ REVIEWED_PROBLEMS = 5
 
 class HomePresenter:
     def __init__(
-        self, view: HomeView, history: HistoryRepository, settings: SettingsRepository
+        self,
+        view: HomeView,
+        history: HistoryRepository,
+        settings: SettingsRepository,
+        registry: TrickRegistry,
     ) -> None:
         self._view = view
         self._history = history
         self._settings = settings
+        self._registry = registry
 
     def show(self) -> None:
+        records = self._history.all()
         self._view.show_settings(SettingsForm.from_settings(self._settings.load()))
         self._view.show_form_errors([])
-        self._view.show_history(recent_history(self._history.all()))
+        self._view.show_recommendations(recommendations(trick_insights(records, self._registry)))
+        self._view.show_history(recent_history(records))
 
     def submit(self, form: SettingsForm) -> PracticeSettings | None:
         """Validate and save the form; returns the settings, or ``None`` after showing errors."""
@@ -147,6 +170,31 @@ class ResultsPresenter:
         self._view.show_summary(summarize(record))
         self._view.show_review(review(record, self._registry, REVIEWED_PROBLEMS))
         self._view.show_drill_report(None if drill is None else drill.report(record))
+
+
+class ProgressPresenter:
+    def __init__(
+        self, view: ProgressView, history: HistoryRepository, registry: TrickRegistry
+    ) -> None:
+        self._view = view
+        self._history = history
+        self._registry = registry
+
+    def show(self, mode: str | None = None) -> None:
+        """Show progress for ``mode``, or for the most played mode."""
+        records = self._history.all()
+        modes = mode_progress(records)
+        selected = next((item for item in modes if item.mode == mode), modes[0] if modes else None)
+        chart = None if selected is None else line_chart([p.score for p in selected.points])
+        self._view.show_progress(
+            ProgressReport(
+                modes=tuple(item.mode for item in modes),
+                selected=selected,
+                chart=chart,
+                tricks=tuple(trick_insights(records, self._registry)),
+                kinds=tuple(kind_insights(records)),
+            )
+        )
 
 
 class LibraryPresenter:

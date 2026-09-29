@@ -7,9 +7,23 @@ from armath.learning import Drill
 from armath.modes import Clock
 from armath.persistence import HistoryRepository, SettingsRepository
 from armath.tricks import TrickRegistry
-from armath.ui.presenters import GamePresenter, HomePresenter, LibraryPresenter, ResultsPresenter
+from armath.ui.presenters import (
+    GamePresenter,
+    HomePresenter,
+    LibraryPresenter,
+    ProgressPresenter,
+    ResultsPresenter,
+)
 from armath.ui.settings_form import SettingsForm
-from armath.ui.views import GameView, HomeView, LibraryView, Navigator, ResultsView, Screen
+from armath.ui.views import (
+    GameView,
+    HomeView,
+    LibraryView,
+    Navigator,
+    ProgressView,
+    ResultsView,
+    Screen,
+)
 
 
 class App:
@@ -23,6 +37,7 @@ class App:
         game_view: GameView,
         results_view: ResultsView,
         library_view: LibraryView,
+        progress_view: ProgressView,
         history: HistoryRepository,
         settings: SettingsRepository,
         registry: TrickRegistry,
@@ -33,10 +48,11 @@ class App:
         self._history = history
         self._settings = settings
         self._registry = registry
-        self._home = HomePresenter(home_view, history, settings)
+        self._home = HomePresenter(home_view, history, settings, registry)
         self._game = GamePresenter(game_view, clock, rng, on_finished=self._finished)
         self._results = ResultsPresenter(results_view, registry)
         self._library = LibraryPresenter(library_view, registry)
+        self._progress = ProgressPresenter(progress_view, history, registry)
         self._drill: Drill | None = None
 
     def open_home(self) -> None:
@@ -48,6 +64,12 @@ class App:
         self._game.quit()
         self._library.show()
         self._navigator.go_to(Screen.LIBRARY)
+
+    def open_progress(self, mode: str | None = None) -> None:
+        """Show progress, for ``mode`` or the most played one; also used to switch modes."""
+        self._game.quit()
+        self._progress.show(mode)
+        self._navigator.go_to(Screen.PROGRESS)
 
     def start(self, form: SettingsForm) -> None:
         settings = self._home.submit(form)

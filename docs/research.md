@@ -205,7 +205,12 @@ Backlog (not urgent):
    (half look-alikes: same-operation Zetamac problems the trick doesn't fit), `?` reveals the
    steps, and the results show per-round times. Possible refinement: per-trick look-alikes that
    share a surface feature (×11 vs ×12, ÷9 on multiples of 90) for sharper discrimination practice.
-6. **Analytics:** feature buckets, baselines, weakness scores, recommender, progress screen.
+6. ~~**Analytics:** feature buckets, baselines, weakness scores, recommender, progress screen.~~
+   Done, simplified from §5: the yardstick is your own median time over recent practice
+   (drills and each session's first problem excluded); seconds above it are "time lost",
+   credited to each problem's best trick → recommendations on the home screen. Progress screen:
+   score chart per mode, per-trick table with older-vs-newer trend, per-problem-kind table.
+   Later: per-kind expected times as the yardstick, multiplication heatmap.
 7. **Optiver 80-in-8:** decimals/fractions, missing operand, MC with distractors, ±1 scoring, O-tricks.
 8. **Polish:** facts mode with spaced repetition, backlog items, GitHub Pages deploy.
 
