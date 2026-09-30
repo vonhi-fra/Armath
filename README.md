@@ -3,6 +3,8 @@
 Mental arithmetic trainer for quant and trading interviews (Zetamac, Optiver 80-in-8 and custom drills),
 with a learning mode that finds your slow problems and teaches the tricks to solve them faster.
 
+**Try it:** https://vonhi-fra.github.io/armath/
+
 Work in progress — see [docs/research.md](docs/research.md) for the plan.
 
 ## Development
