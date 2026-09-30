@@ -64,6 +64,18 @@ def test_near_misses_of_times_eleven_change_one_number_slightly() -> None:
     assert all(9 <= p.left.value <= 13 and p.left.value != 11 for p in factors)
 
 
+def test_percentage_drills_mix_in_other_percentages() -> None:
+    trick = REGISTRY.get("pct-fraction")
+    lookalikes = lookalikes_for(trick)
+    assert lookalikes is not None
+    rng = Random(0)
+
+    problems = [lookalikes.generate(rng) for _ in range(40)]
+
+    assert all(p.operation is Operation.MULTIPLY and not trick.applies_to(p) for p in problems)
+    assert any("%" in p.prompt for p in problems)
+
+
 def test_general_methods_have_no_lookalikes() -> None:
     assert lookalikes_for(REGISTRY.get("mul-split")) is None
 

@@ -17,6 +17,7 @@ from armath.generators import (
     MixedGenerator,
     ProblemGenerator,
     ZetamacSettings,
+    optiver_generator,
     zetamac_generator,
 )
 from armath.learning.review import TrickLesson, lesson_for
@@ -109,15 +110,20 @@ def _nudge(problem: Problem, rng: Random) -> Problem | None:
 def lookalikes_for(trick: Trick) -> ProblemGenerator | None:
     """Problems of the same operation that the trick does *not* apply to.
 
-    Half are near misses of the trick's own problems (for whole-number tricks), half ordinary
-    Zetamac-style problems. ``None`` for general methods, which apply to everything.
+    For whole-number tricks, half are near misses of the trick's own problems and half ordinary
+    Zetamac-style problems; for the others, Optiver-style problems. ``None`` for general methods,
+    which apply to everything.
     """
     if trick.fallback:
         return None
+    if not isinstance(trick, WholeNumberTrick):
+        # Decimal, fraction and percentage tricks: other Optiver problems of the same operation.
+        return FilteredGenerator(
+            optiver_generator(missing_operand_share=0),
+            lambda problem: problem.operation is trick.operation and not trick.applies_to(problem),
+        )
     same_operation = zetamac_generator(ZetamacSettings(operations=frozenset({trick.operation})))
     ordinary = FilteredGenerator(same_operation, lambda problem: not trick.applies_to(problem))
-    if not isinstance(trick, WholeNumberTrick):
-        return ordinary
     return MixedGenerator([NearMissGenerator(trick, fallback=ordinary), ordinary])
 
 

@@ -45,6 +45,18 @@ from armath.learning.elimination import rule_out
             Fraction(21),
             "Estimate: 100 ÷ 70 ≈ 1.4, so 21 is about 10 times too big.",
         ),
+        (
+            Problem.create(Operand.percent(8), Operation.MULTIPLY, Operand.integer(300)),
+            Fraction(240),
+            "Estimate: 8% of 300 ≈ 24, so 240 is about 10 times too big.",
+        ),
+        (
+            Problem.create(
+                Operand.percent(15), Operation.MULTIPLY, Operand.integer(240), unknown=Unknown.LEFT
+            ),
+            Fraction(3, 2),
+            "Estimate: 40 ÷ 200 ≈ 20%, so 150% is about 10 times too big.",
+        ),
     ],
 )
 def test_rule_out(the_problem: Problem, chosen: Fraction, reason: str) -> None:

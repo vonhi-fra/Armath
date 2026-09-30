@@ -7,11 +7,12 @@ from typing import Self
 
 
 class NumberStyle(StrEnum):
-    """How a number is written: ``37``, ``138.6`` or ``3/8``."""
+    """How a number is written: ``37``, ``138.6``, ``3/8`` or ``15%`` (the value 0.15)."""
 
     INTEGER = "integer"
     DECIMAL = "decimal"
     FRACTION = "fraction"
+    PERCENT = "percent"
 
 
 def decimal_places(value: Fraction) -> int | None:
@@ -39,15 +40,21 @@ def can_write(value: Fraction, style: NumberStyle) -> bool:
             return decimal_places(value) is not None
         case NumberStyle.FRACTION:
             return True
+        case NumberStyle.PERCENT:
+            return decimal_places(value * 100) is not None
 
 
 def format_number(value: Fraction, style: NumberStyle) -> str:
     """Write ``value`` exactly in ``style``; raises ``ValueError`` if impossible."""
     if not can_write(value, style):
         raise ValueError(f"{value} cannot be written exactly as {style}")
-    if style is NumberStyle.DECIMAL:
-        return _format_decimal(value)
-    return str(value)
+    match style:
+        case NumberStyle.DECIMAL:
+            return _format_decimal(value)
+        case NumberStyle.PERCENT:
+            return f"{_format_decimal(value * 100)}%"
+        case _:
+            return str(value)
 
 
 def _format_decimal(value: Fraction) -> str:
@@ -97,6 +104,11 @@ class Operand:
     @classmethod
     def fraction(cls, numerator: int, denominator: int) -> Self:
         return cls(Fraction(numerator, denominator), NumberStyle.FRACTION)
+
+    @classmethod
+    def percent(cls, percentage: str | int | Fraction) -> Self:
+        """``Operand.percent(15)`` is 15%, the value 0.15."""
+        return cls(Fraction(percentage) / 100, NumberStyle.PERCENT)
 
     def __str__(self) -> str:
         return format_number(self.value, self.style)

@@ -11,8 +11,8 @@ worth as much as computing fast. Two checks cover most tempting wrong options:
 import math
 from fractions import Fraction
 
-from armath.domain import Operation, Problem, Unknown
-from armath.domain.numbers import format_value
+from armath.domain import NumberStyle, Operand, Operation, Problem, Unknown
+from armath.domain.numbers import can_write, format_value
 from armath.tricks.base import whole_operands
 from armath.tricks.inverse import undo
 
@@ -36,18 +36,20 @@ def _by_magnitude(problem: Problem, chosen: Fraction) -> str | None:
     if 1 / MAGNITUDE_FACTOR < ratio < MAGNITUDE_FACTOR:
         return None
     if problem.unknown is Unknown.RESULT:
-        x, operation, y = problem.left.value, problem.operation, problem.right.value
+        left, operation, right = problem.left, problem.operation, problem.right
     else:
         left, operation, right = undo(problem)
-        x, y = left.value, right.value
-    rough_x, rough_y = _one_figure(x), _one_figure(y)
+    rough_x, rough_y = _one_figure(left.value), _one_figure(right.value)
     if operation is Operation.DIVIDE and rough_y == 0:
         return None
     estimate = operation.apply(rough_x, rough_y)
+    percent_of = operation is Operation.MULTIPLY and left.style is NumberStyle.PERCENT
+    symbol = "of" if percent_of else operation.symbol
     size = "big" if ratio > 1 else "small"
     return (
-        f"Estimate: {_show(rough_x)} {operation.symbol} {_show(rough_y)} ≈ {_show(estimate)}, "
-        f"so {format_value(chosen)} is about {_times(ratio)} times too {size}."
+        f"Estimate: {_show(rough_x, left.style)} {symbol} {_show(rough_y, right.style)} "
+        f"≈ {_show(estimate, problem.answer.style)}, "
+        f"so {_written(chosen, problem.answer.style)} is about {_times(ratio)} times too {size}."
     )
 
 
@@ -89,8 +91,16 @@ def _times(ratio: Fraction) -> str:
     return f"{10 ** round(math.log10(factor)):,}"
 
 
-def _show(value: Fraction) -> str:
-    """A rough value, readable: from 10 up whole numbers with separators, below 10 two figures."""
+def _show(value: Fraction, style: NumberStyle) -> str:
+    """A rough value, readable: from 10 up whole numbers with separators, below 10 two figures;
+    percentages stay percentages."""
+    if style is NumberStyle.PERCENT:
+        return f"{_show(value * 100, NumberStyle.DECIMAL)}%"
     if value >= 10:
         return f"{round(value):,}"
     return f"{float(value):.2g}"
+
+
+def _written(value: Fraction, style: NumberStyle) -> str:
+    """An option as it was shown (``150%``, not ``1.5``)."""
+    return str(Operand(value, style)) if can_write(value, style) else format_value(value)

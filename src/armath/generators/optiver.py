@@ -1,7 +1,8 @@
 """Problems in the style of Optiver's 80-in-8 test (docs/research.md §1).
 
-Integers, decimals and fractions in all four operations, always with "neat" answers (they are
-meant to be solvable in your head in ~6 seconds), and a share of missing-operand questions.
+Integers, decimals, fractions and percentages in all four operations, always with "neat" answers
+(they are meant to be solvable in your head in ~6 seconds), and a share of missing-operand
+questions.
 """
 
 from fractions import Fraction
@@ -150,6 +151,25 @@ class FractionOperations:
         return _problem(fraction(left), operation, fraction(right))
 
 
+FRIENDLY_PERCENTS = (5, 10, Fraction(25, 2), 20, 25, 40, 50, 60, 75, 80)
+"""Percentages that are simple fractions: 12.5% = 1/8, 75% = 3/4, …"""
+OTHER_PERCENTS = (2, 4, 6, 8, 12, 15, 18, 24, 30, 35, 36, 45, 70)
+PERCENT_BASES = (40, 60, 80, 120, 160, 180, 200, 240, 300, 320, 360, 400, 480, 500, 600, 800)
+SWAP_BASES = (2, 4, 5, 10, 20, 25, 50)
+"""``24% of 50`` is easier as ``50% of 24``."""
+
+
+class PercentageProblems:
+    def generate(self, rng: Random) -> Problem:
+        if rng.random() < 0.2:
+            percentage: Fraction | int = rng.randint(3, 99)
+            base = rng.choice(SWAP_BASES)
+        else:
+            percentage = rng.choice((*FRIENDLY_PERCENTS, *OTHER_PERCENTS))
+            base = rng.choice(PERCENT_BASES)
+        return _problem(Operand.percent(percentage), Operation.MULTIPLY, number(base))
+
+
 def optiver_generator(missing_operand_share: float = MISSING_OPERAND_SHARE) -> ProblemGenerator:
     mix = WeightedGenerator(
         [
@@ -160,6 +180,7 @@ def optiver_generator(missing_operand_share: float = MISSING_OPERAND_SHARE) -> P
             (3, DecimalProducts()),
             (2, DecimalQuotients()),
             (2, FractionOperations()),
+            (2, PercentageProblems()),
         ]
     )
     return MissingOperandGenerator(mix, missing_operand_share)

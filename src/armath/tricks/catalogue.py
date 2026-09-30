@@ -33,6 +33,13 @@ from armath.tricks.multiplication import (
     TimesTwelve,
     UnitsSumToTen,
 )
+from armath.tricks.percentages import (
+    PercentAsFraction,
+    PercentFromTens,
+    PercentOfWhat,
+    PercentSwap,
+    WhatPercent,
+)
 from armath.tricks.registry import TrickRegistry
 from armath.tricks.subtraction import (
     CountUpSubtraction,
@@ -73,6 +80,9 @@ def _direct_tricks() -> list[Trick]:
         DecimalMethod(Operation.MULTIPLY),
         FriendlyDecimal(Operation.MULTIPLY),
         FractionMethod(Operation.MULTIPLY),
+        PercentAsFraction(),
+        PercentSwap(),
+        PercentFromTens(),
         ChunkingDivision(),
         DivideByFive(),
         HalveBoth(),
@@ -82,6 +92,8 @@ def _direct_tricks() -> list[Trick]:
         DecimalMethod(Operation.DIVIDE),
         FriendlyDecimal(Operation.DIVIDE),
         FractionMethod(Operation.DIVIDE),
+        WhatPercent(),
+        PercentOfWhat(),
     ]
 
 

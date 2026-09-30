@@ -74,12 +74,19 @@ class Problem:
         left = self._shown(Unknown.LEFT)
         right = self._shown(Unknown.RIGHT)
         result = self._shown(Unknown.RESULT)
-        return f"{left} {self.operation.symbol} {right} = {result}"
+        return f"{left} {self.symbol} {right} = {result}"
 
     @property
     def equation(self) -> str:
         """The problem with every part shown, e.g. ``66 × 2.1 = 138.6``."""
-        return f"{self.left} {self.operation.symbol} {self.right} = {self.result}"
+        return f"{self.left} {self.symbol} {self.right} = {self.result}"
+
+    @property
+    def symbol(self) -> str:
+        """``of`` for a percentage of a number (15% of 240), otherwise the operation's symbol."""
+        if self.operation is Operation.MULTIPLY and self.left.style is NumberStyle.PERCENT:
+            return "of"
+        return self.operation.symbol
 
     def _part(self, part: Unknown) -> Operand:
         match part:
@@ -91,7 +98,11 @@ class Problem:
                 return self.result
 
     def _shown(self, part: Unknown) -> str:
-        return PLACEHOLDER if part is self.unknown else str(self._part(part))
+        operand = self._part(part)
+        if part is not self.unknown:
+            return str(operand)
+        # "?% of 240 = 36" makes clear that a percentage is asked for.
+        return f"{PLACEHOLDER}%" if operand.style is NumberStyle.PERCENT else PLACEHOLDER
 
     def _has_unique_answer(self) -> bool:
         match self.operation, self.unknown:

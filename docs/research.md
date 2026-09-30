@@ -234,8 +234,11 @@ Backlog (not urgent):
      add little beyond those); ~~near-miss look-alikes~~ (a trick problem nudged by 1–2 until
      the trick stops applying); ~~facts advice~~ (home suggests the times-table deck after
      3+ slow table facts in practice, incl. division by a table fact).
-   - Not planned: percentages (F2) need a new problem type that neither Zetamac nor the
-     reported Optiver content uses; add it if a target test needs it.
+   - ~~Percentages in the Optiver mix~~ (owner's request): `NumberStyle.PERCENT` writes a value
+     as a percentage (15% is 0.15), so "15% of 240" is a multiplication shown with "of";
+     questions "p% of n = ?", "?% of n = m", "p% of ? = m". Tricks: percent as a fraction
+     (25% = 1/4), percentage swap F2 (24% of 50 = 50% of 24), build from 10%/5%/1%,
+     what percent (part ÷ whole), find the whole (1% then 100%). "15%" is a valid typed answer.
 
 (Tricks moved ahead of analytics: the learning loop can start from "your slowest problems" right away,
 and weakness detection then has trick applicability to aggregate by.)

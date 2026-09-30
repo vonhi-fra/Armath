@@ -9,7 +9,7 @@ import pytest
 from factories import START, attempt, problem, record
 
 from armath.analytics import SessionSummary, TrickInsight
-from armath.domain import Operation, SessionKind
+from armath.domain import Operation, SessionKind, parse_answer
 from armath.facts import DeckProgress, FactsAdvice, FactsReport
 from armath.learning import DrillReport, LibraryEntry, ReviewItem, TrickLesson
 from armath.modes import ManualClock
@@ -432,10 +432,15 @@ def _correct_choice(harness: Harness) -> int:
 def parse_problem_prompt(prompt: str) -> Callable[[str], bool]:
     """A checker for options of ``a op b = c`` with one part replaced by ``?``."""
     left, symbol, right, _, result = prompt.split(" ")
-    functions = {"+": add, "−": sub, "×": mul, "÷": truediv}
+    functions = {"+": add, "−": sub, "×": mul, "of": mul, "÷": truediv}
+
+    def value(text: str) -> Fraction:
+        parsed = parse_answer(text)
+        assert parsed is not None, text
+        return parsed
 
     def holds(option: str) -> bool:
-        a, b, c = (Fraction(option if part == "?" else part) for part in (left, right, result))
+        a, b, c = (value(option if part in ("?", "?%") else part) for part in (left, right, result))
         return bool(functions[symbol](a, b) == c)
 
     return holds
