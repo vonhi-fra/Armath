@@ -39,12 +39,14 @@ async function cacheFirst(request) {
 }
 
 // The page, scripts and styles come fresh from the network whenever it answers, so they always
-// match each other (no timeout: a slow network must not mix cached and fresh files). Offline,
-// fetch fails at once and the cached copy is used.
+// match each other (no timeout: a slow network must not mix cached and fresh files). "no-cache"
+// skips the browser's HTTP cache too: GitHub Pages allows reusing files for 10 minutes, long
+// enough to pair a new page with an old wheel.json. Offline, fetch fails at once and the cached
+// copy is used. (A navigation request can't be copied with new options, hence the URL.)
 async function networkFirst(request) {
   const cache = await caches.open(CACHE);
   try {
-    const response = await fetch(request);
+    const response = await fetch(request.url, { cache: "no-cache" });
     if (response.ok) await cache.put(request, response.clone());
     return response;
   } catch (error) {

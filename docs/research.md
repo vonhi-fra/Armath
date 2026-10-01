@@ -255,6 +255,10 @@ match, offline from cache; Pyodide and the hashed wheel cache-first and reused a
 on-screen keypad on touch screens (`pointer: coarse`, system keyboard suppressed with
 `inputmode="none"`), keyboard-only hints hidden on touch. Verified in the sandbox: install
 criteria files served, update replaces the cache, the app starts with the server down.
+Fix after the first deploy: the phone loaded a new page with a 10-minute-old `wheel.json` from the
+HTTP cache (GitHub Pages `max-age=600`) pointing at the deleted previous wheel → "No module named
+armath". `wheel.json` and the service worker's network fetches now use `cache: "no-cache"`, and a
+failed wheel download stops the boot with a clear message.
 Research notes below.
 
 Measured on the sandbox at 375 px: the layout mostly works (there is a ≤600 px media query), but

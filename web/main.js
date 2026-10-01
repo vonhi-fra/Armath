@@ -7,14 +7,21 @@ const status = document.getElementById("loading-status");
 async function boot() {
   const [{ loadPyodide }, manifest] = await Promise.all([
     import(`${PYODIDE_URL}pyodide.mjs`),
-    fetch("wheel.json").then((response) => {
+    // GitHub Pages lets browsers reuse files for 10 minutes; a stale wheel.json would point at a
+    // wheel that the last deploy removed. "no-cache" revalidates (cheap: usually a 304).
+    fetch("wheel.json", { cache: "no-cache" }).then((response) => {
       if (!response.ok) throw new Error(`wheel.json: HTTP ${response.status}`);
       return response.json();
     }),
   ]);
   const pyodide = await loadPyodide({ indexURL: PYODIDE_URL });
   status.textContent = "Starting Armath…";
-  await pyodide.loadPackage(new URL(manifest.wheel, window.location.href).href);
+  // loadPackage only logs a failed download; fail here instead of at "No module named armath".
+  const failures = [];
+  await pyodide.loadPackage(new URL(manifest.wheel, window.location.href).href, {
+    errorCallback: (message) => failures.push(message),
+  });
+  if (failures.length > 0) throw new Error(failures.join(" "));
   pyodide.runPython("from armath.web.dom import main\nmain()");
 }
 
