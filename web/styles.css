@@ -506,6 +506,64 @@ tbody tr:last-child td {
   justify-self: center;
 }
 
+/* On-screen keypad: touch screens only (their number pad has no "/" or "%"). */
+.keypad {
+  display: none;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: min(320px, 100%);
+}
+
+.keypad button {
+  min-height: 52px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--problem-font);
+  font-size: 1.5rem;
+  font-weight: 700;
+  touch-action: manipulation; /* fast repeated taps must not zoom */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.keypad button:active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.keypad .keypad-delete {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+}
+
+.keypad-delete svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.keypad .keypad-zero {
+  grid-column: span 2;
+}
+
+@media (pointer: coarse) {
+  .keypad {
+    display: grid;
+  }
+
+  #answer[hidden] + .keypad,
+  .keyboard-only,
+  .game-actions kbd {
+    display: none;
+  }
+}
+
 /* ---------- Results ---------- */
 .results {
   display: grid;
@@ -1257,8 +1315,21 @@ body.failed #loading-status {
     font-size: 1.1rem;
   }
 
+  /* Two rows: brand and theme, then the navigation across the full width. */
+  .topbar {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+
   .nav {
-    margin-left: 0;
+    order: 1;
+    width: 100%;
+    margin: 0;
+  }
+
+  .nav-link {
+    flex: 1;
+    padding: 8px 4px;
   }
 
   .optiver-card,

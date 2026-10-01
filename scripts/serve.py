@@ -19,8 +19,10 @@ class SiteHandler(SimpleHTTPRequestHandler):
         ".js": "text/javascript",
         ".mjs": "text/javascript",
         ".json": "application/json",
+        ".png": "image/png",
         ".svg": "image/svg+xml",
         ".wasm": "application/wasm",
+        ".webmanifest": "application/manifest+json",
         ".whl": "application/zip",
         ".woff2": "font/woff2",
     }

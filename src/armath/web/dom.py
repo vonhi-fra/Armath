@@ -763,7 +763,16 @@ def main() -> None:
             event.preventDefault()
             app.reveal_steps()
 
+    def press_key(key: str) -> None:
+        answer = _element("answer")
+        answer.value = answer.value[:-1] if key == "Backspace" else answer.value + key
+        app.answer(answer.value)
+        answer.focus()
+
     def on_click(event: Any) -> None:
+        key = event.target.closest("[data-key]")
+        if not _absent(key):
+            press_key(str(key.dataset.key))
         trick = event.target.closest("[data-trick]")
         if not _absent(trick):
             app.start_drill(str(trick.dataset.trick))
@@ -785,6 +794,8 @@ def main() -> None:
         files.item(0).text().then(create_once_callable(app.import_data))
         event.target.value = ""  # choosing the same file again should work too
 
+    if window.matchMedia("(pointer: coarse)").matches:
+        _element("answer").inputMode = "none"  # the on-screen keypad replaces the phone's keyboard
     _listen(_element("settings-form"), "submit", on_start)
     _listen(_element("answer"), "input", lambda event: app.answer(event.target.value))
     _listen(_element("answer"), "keydown", on_answer_key)

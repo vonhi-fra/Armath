@@ -24,7 +24,7 @@ build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["tests"]
+pythonpath = ["tests", "scripts"]
 addopts = ["--strict-markers", "--strict-config", "-ra", "--import-mode=importlib"]
 
 [tool.coverage.run]

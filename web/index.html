@@ -6,6 +6,8 @@
   <title>Armath</title>
   <meta name="description" content="Mental arithmetic trainer for quant interviews.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#f6f7fb">
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <script src="theme.js"></script>
@@ -44,7 +46,7 @@
     <div class="loader" id="loader" role="status">
       <div class="spinner" aria-hidden="true"></div>
       <p id="loading-status">Loading Python in your browser…</p>
-      <p class="hint">The first visit downloads ~8 MB; later visits are cached.</p>
+      <p class="hint">The first visit downloads about 6 MB; after that Armath also works offline.</p>
     </div>
 
     <section id="screen-home" class="screen" hidden>
@@ -106,8 +108,8 @@
       <section class="card optiver-card" aria-labelledby="optiver-title">
         <div>
           <h2 id="optiver-title">Optiver 80 in 8</h2>
-          <p class="muted">80 multiple-choice questions in 8 minutes: whole numbers, decimals, fractions and
-            missing numbers. +1 for a right answer, −1 for a wrong one. Pick with the keys 1–4.</p>
+          <p class="muted">80 multiple-choice questions in 8 minutes: whole numbers, decimals, fractions,
+            percentages and missing numbers. +1 for a right answer, −1 for a wrong one. <span class="keyboard-only">Pick with the keys 1–4.</span></p>
         </div>
         <button id="start-optiver" class="button primary" type="button">Start test</button>
       </section>
@@ -147,6 +149,24 @@
         <div id="problem" class="problem" aria-live="polite"></div>
         <input id="answer" class="answer" type="text" inputmode="decimal" autocomplete="off"
                autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Your answer">
+        <div id="keypad" class="keypad" role="group" aria-label="Keypad">
+          <button type="button" data-key="1">1</button>
+          <button type="button" data-key="2">2</button>
+          <button type="button" data-key="3">3</button>
+          <button type="button" data-key="/" aria-label="Fraction bar">/</button>
+          <button type="button" data-key="4">4</button>
+          <button type="button" data-key="5">5</button>
+          <button type="button" data-key="6">6</button>
+          <button type="button" data-key="%" aria-label="Percent">%</button>
+          <button type="button" data-key="7">7</button>
+          <button type="button" data-key="8">8</button>
+          <button type="button" data-key="9">9</button>
+          <button type="button" data-key="Backspace" class="keypad-delete" aria-label="Delete">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7z M12 9l6 6m0-6l-6 6"/></svg>
+          </button>
+          <button type="button" data-key="." aria-label="Decimal point">.</button>
+          <button type="button" data-key="0" class="keypad-zero">0</button>
+        </div>
         <div id="choices" class="choices" role="group" aria-label="Options" hidden></div>
         <p id="hint" class="hint-line" hidden></p>
         <div id="steps" class="card steps-panel" aria-live="polite" hidden></div>

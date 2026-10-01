@@ -243,6 +243,98 @@ Backlog (not urgent):
 (Tricks moved ahead of analytics: the learning loop can start from "your slowest problems" right away,
 and weakness detection then has trick applicability to aggregate by.)
 
+## 10. Next directions (researched 2026-10-01, owner to decide)
+
+### 10.1 Android app — done as a PWA (2026-10-01)
+
+Built: `web/manifest.webmanifest`, PNG icons (`scripts/make_icons.py`, incl. maskable),
+`web/sw.js` (precaches the site and the Pyodide files; page/scripts network-first so they always
+match, offline from cache; Pyodide and the hashed wheel cache-first and reused across builds;
+`build_site.py` stamps build id + file list, old caches are deleted on activate),
+`navigator.storage.persist()`, status-bar colour follows the theme, two-row top bar on phones,
+on-screen keypad on touch screens (`pointer: coarse`, system keyboard suppressed with
+`inputmode="none"`), keyboard-only hints hidden on touch. Verified in the sandbox: install
+criteria files served, update replaces the cache, the app starts with the server down.
+Research notes below.
+
+Measured on the sandbox at 375 px: the layout mostly works (there is a ≤600 px media query), but
+the top bar overflows (nav + theme picker make the page 512 px wide), the Optiver card says
+"pick with the keys 1–4", there is no web manifest, no service worker, and storage is not
+persistent (`navigator.storage.persisted()` is false). The first load transfers ~6 MB (Pyodide).
+
+| Option | What it is | Cost | Verdict |
+|---|---|---|---|
+| **PWA** (installable web app) | manifest + icons + service worker; Chrome "Install app" | small | **recommended** |
+| TWA via Bubblewrap | APK that opens the site full screen in Chrome | medium | no gain for personal use |
+| Capacitor / WebView wrapper | web files bundled inside an APK | medium | no gain, needs Android SDK |
+| Native (Kotlin) or Kivy/BeeWare | new UI on Android | large (UI rewrite) | not worth it |
+
+- Chrome on Android installs a PWA as a **WebAPK**: a real launcher icon, app-drawer entry, own
+  window without a URL bar, listed in system settings. Since Chrome 108 (mobile) installing from
+  the menu needs only a manifest (name, icons 192/512, `start_url`, `display: standalone`); the
+  automatic install prompt still wants a service worker with a `fetch` handler.
+- **Offline:** a service worker caches the app shell, the wheel and the Pyodide files
+  (`pyodide.mjs`, `pyodide.asm.js`, `pyodide.asm.wasm`, `python_stdlib.zip`, `pyodide-lock.json`).
+  jsDelivr sends CORS headers, so they can be cached cross-origin; self-hosting them in `site/`
+  is the simpler, more robust choice. Cache name keyed by the wheel hash so updates replace it.
+- **Data:** call `navigator.storage.persist()`; installed apps are usually granted it, otherwise
+  Chrome may evict localStorage under storage pressure. Phone and PC data stay separate (no
+  server); the existing backup export/restore moves data between them.
+- **Typing on a phone:** `inputmode="decimal"` opens the number pad, which (in Gboard) lacks `/`
+  — fraction answers (fraction drills now, all probability answers later) need an on-screen
+  keypad (digits, `/`, `.`, `−`, `%`, ⌫, ⏎). Also: keep the problem visible above the keyboard,
+  44 px tap targets, hide keyboard hints.
+- **TWA pitfall:** Digital Asset Links must be served from the origin root
+  (`vonhi-fra.github.io/.well-known/assetlinks.json`), so a TWA for a project site needs a separate
+  `vonhi-fra.github.io` repo; without it the URL bar shows. A sideloaded TWA adds nothing a WebAPK
+  doesn't already give.
+
+### 10.2 Probability, brain teasers, stochastic processes
+
+**What firms ask.** Probability and expected value are the core of trader interviews (Jane Street,
+SIG, Optiver, Citadel): expected value and optimal stopping, conditional probability / Bayes,
+counting, recursion and Markov chains (first-step analysis, pattern waiting times, random walks,
+gambler's ruin), variance and order statistics; researcher roles add martingales, Brownian motion
+and stochastic calculus. Written tests: Optiver "Beat the Odds" (probability MC, ~90 s per
+question, pick the closest value, no going back — reported counts vary from 10 to 30), SIG online
+test (mental maths + probability/EV + sequences, 60–75 min). Market-making games and poker rounds
+are live and out of scope.
+
+**Existing tools.** Static banks: Brainstellar (free puzzles, terse answers), OpenQuant (~190
+questions, OA mode, video solutions), QuantGuide (bank + hints + solutions + stats, MC answers,
+paid tiers), QuantVault (large freemium bank). Books: Zhou's "Green Book", Crack's *Heard on the
+Street*, Joshi's *Quant Job Interview Q&A*, Mosteller's *Fifty Challenging Problems*. All of them
+are finite banks: once you've seen a question, you remember its answer, not the method.
+
+**What Armath could do differently** — the same learning loop as for arithmetic:
+- **Parameterised problem families** instead of a fixed bank: every attempt gets fresh numbers,
+  so you practise the method, not the answer. Examples (verified): expected flips until HH = 6, HT
+  = 4, HHH = 14; expected rolls to see all six faces = 147/10; one optional re-roll of a die
+  (keep 4–6) = 17/4; 1% prevalence, 99% sensitivity, 95% specificity → P(ill | positive) = 1/6;
+  E[max of two dice] = 161/36.
+- **Methods instead of tricks** (complement, symmetry, linearity of expectation with indicators,
+  first-step analysis / name the states, Bayes table, stars and bars, backward induction for
+  stopping, gambler's ruin formula), each explaining a problem with checked steps like `Trick`.
+- **Exact answers**: `parse_answer` already accepts `3/8`; answers are `Fraction`s. Tests verify
+  each family by exact computation (enumeration, Markov linear system) plus Monte Carlo.
+- **Two modes**: untimed practice with hints → steps (worked examples with fading), and a timed
+  "Beat the Odds"-style MC test (closest of 5) reusing `PlausibleChoices`.
+- Review / drills (blocked → interleaved: *recognising which method applies* is the main skill
+  here, Rohrer) / time lost per method / spaced repetition all carry over.
+- **Brain teasers** mostly can't be parameterised (pirates, ropes, prisoners): a hand-written,
+  curated library with hint → solution, self-graded, and spaced review of the *key insight*.
+  Classic puzzles are folklore, but wording and solutions must be our own (no copying books/sites).
+- **Stochastic processes**: random walks, hitting probabilities/times, martingale stopping and
+  Brownian-motion facts (P(hit a before −b) = b/(a+b), E[exit time] = ab) parameterise well;
+  Itô-calculus derivations have symbolic answers → MC or self-graded cards only.
+
+**Cost.** Large — bigger than any single roadmap step so far. Session, `Attempt`, review and
+serialization are typed to the arithmetic `Problem` (left op right), so a word problem needs a
+general question protocol first (prompt, answer, check), with old saved data still loading.
+Then each family is content work: generator + method explanation + exact verifier + tests.
+A sensible MVP: ~8–10 families (dice/coins/cards counting, EV, Bayes, geometric/waiting times,
+pattern waiting, gambler's ruin, coupon collector, simple stopping), untimed practice + review.
+
 ## Sources
 - [Optiver 80 in 8 — quantvault](https://quantvault.org/optiver-80-in-8.html)
 - [Optiver test — JobTestPrep](https://www.jobtestprep.com/optiver-test)
@@ -258,3 +350,9 @@ and weakness detection then has trick applicability to aggregate by.)
 - [Siegler, Strategy choice procedures and multiplication skill](https://www.researchgate.net/publication/20184024_Strategy_Choice_Procedures_and_the_Development_of_Multiplication_Skill)
 - [Renkl et al., Fading worked-out solution steps](https://www.academia.edu/1126007/From_studying_examples_to_solving_problems_Fading_worked_out_solution_steps_helps_learning)
 - [PyScript page load time — John Hanley](https://www.jhanley.com/blog/pyscript-page-load-time/)
+- [Revisiting Chrome's installability criteria](https://developer.chrome.com/blog/update-install-criteria); [Making PWAs installable — MDN](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable)
+- [WebAPKs on Android — CCL](https://www.cclsolutionsgroup.com/post/when-is-an-app-not-an-app-investigating-webapks-on-android); [Persistent storage — web.dev](https://web.dev/articles/persistent-storage); [Storage quotas and eviction — MDN](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria)
+- [Trusted Web Activity quick start](https://developer.chrome.com/docs/android/trusted-web-activity/quick-start); [assetlinks on a github.io user site (example)](https://github.com/LeeMcQ/leemcq.github.io)
+- [Best quant interview prep — quantvault](https://quantvault.org/best-quant-interview-prep.html); [QuantGuide](https://www.quantguide.io/); [OpenQuant questions](https://openquant.co/questions); [Brainstellar (GitHub)](https://github.com/rudradesai200/BrainStellar)
+- [Quant probability interview questions — quantt](https://www.quantt.co.uk/resources/quant-probability-interview-questions); [SIG interview — quantt](https://www.quantt.co.uk/resources/sig-interview)
+- [Optiver Beat the Odds — everythingquant](https://everythingquant.com/online-assessments/optiver-probability-tool/); [Optiver online assessment — quantvault](https://quantvault.org/optiver-online-assessment.html)

@@ -19,9 +19,17 @@ with a learning mode that finds your slow problems and teaches the tricks to sol
 - **Progress:** score charts per mode, where you lose time and which trick would help most,
   recommendations on the home screen.
 - Six themes including dark mode; no account needed, your data stays in your browser.
+- **Works as a phone app:** install it from the browser and it runs offline, with an on-screen
+  keypad for fractions and percentages.
 
 The research behind it (test formats, learning science, trick catalogue) is in
 [docs/research.md](docs/research.md).
+
+### Install on Android
+
+Open the site in Chrome, then menu ⋮ → **Add to Home screen** → **Install**. Armath gets its own
+icon and window and works offline after the first visit. Phone and computer keep separate
+histories; move them with **Progress → Your data** (backup / restore).
 
 ## Development
 
@@ -46,7 +54,12 @@ and the UI is plain HTML/CSS, so the site can be hosted on GitHub Pages.
 ```bash
 uv run python scripts/build_site.py   # assemble site/ (web/ files + fresh wheel)
 uv run python scripts/serve.py        # http://localhost:8000 (correct MIME types on Windows)
+uv run python scripts/make_icons.py   # re-render the app icons in web/icons/ (rarely needed)
 ```
+
+A service worker (`web/sw.js`) caches the app and Pyodide, so the installed app works offline;
+the build script stamps it with the list of files and a build id, so each deploy replaces the
+old cache.
 
 Every push to `main` runs the tests, builds the site and deploys it to GitHub Pages
 (`.github/workflows/pages.yml`). One-time setup: repository **Settings → Pages → Source:

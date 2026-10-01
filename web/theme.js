@@ -16,6 +16,9 @@
   function apply(choice) {
     const resolved = choice === "system" ? (darkQuery.matches ? "dark" : "light") : choice;
     document.documentElement.dataset.theme = resolved;
+    // Phones colour the status bar (and an installed app's title bar) to match the page.
+    const background = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", background);
   }
 
   apply(saved());

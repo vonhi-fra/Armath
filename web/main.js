@@ -1,6 +1,6 @@
 // Loads Pyodide and the armath wheel, then hands control to Python (armath.web.dom.main).
-const PYODIDE_VERSION = "314.0.7";
-const PYODIDE_URL = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
+// scripts/build_site.py reads PYODIDE_URL to cache Pyodide for offline use: keep it one literal.
+const PYODIDE_URL = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/";
 
 const status = document.getElementById("loading-status");
 
@@ -18,8 +18,22 @@ async function boot() {
   pyodide.runPython("from armath.web.dom import main\nmain()");
 }
 
-boot().catch((error) => {
-  console.error(error);
-  status.textContent = `Could not start Armath: ${error.message}`;
-  document.body.classList.add("failed");
-});
+// Runs after boot, so the service worker caches files the browser has just downloaded instead
+// of downloading them a second time.
+async function workOffline() {
+  if ("serviceWorker" in navigator) {
+    await navigator.serviceWorker.register("sw.js");
+  }
+  // Without this, Chrome may clear saved sessions when the phone runs low on space.
+  if (navigator.storage?.persist && !(await navigator.storage.persisted())) {
+    await navigator.storage.persist();
+  }
+}
+
+boot()
+  .then(() => workOffline().catch((error) => console.warn("Offline support unavailable:", error)))
+  .catch((error) => {
+    console.error(error);
+    status.textContent = `Could not start Armath: ${error.message}`;
+    document.body.classList.add("failed");
+  });
